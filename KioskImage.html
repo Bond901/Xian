@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仙 (Xian) - Kiosk點餐流程模擬 (已加入購物車與冰塊/數量)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f5f5f4; /* bg-stone-100 */
+        }
+        /* Kiosk 螢幕在桌面版 (MD+) 上限制尺寸，但在手機上 (預設) 則佔滿視窗 */
+        #kiosk-container {
+            width: 100%;
+            height: 100vh; /* 手機使用全高 */
+            max-width: 1000px;
+            box-shadow: 0 0 0 transparent; /* 手機上移除陰影 */
+        }
+        @media (min-width: 768px) {
+            #kiosk-container {
+                height: 90vh; /* 桌面限制高度 */
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+                border: 4px solid #44403c; /* stone-800 */
+                border-radius: 16px;
+                overflow: hidden;
+            }
+        }
+
+        .step-indicator {
+            transition: all 0.3s ease;
+        }
+        .step-indicator.active {
+            background-color: #047857; /* emerald-700 */
+            color: white;
+            transform: scale(1.05);
+        }
+        .choice-card {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .choice-card:hover {
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+            transform: translateY(-2px);
+        }
+        .choice-card.selected {
+            border: 3px solid #059669; /* emerald-600 */
+            background-color: #ecfdf5; /* emerald-50 */
+            transform: scale(1.02);
+        }
+        .material-image {
+            height: 100px; /* 固定圖片高度 */
+            width: 100%;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+        /* 隱藏桌面版的 Next/Price 區域，因為它們被移到固定底部欄 */
+        #desktop-footer {
+            display: none;
+        }
+        @media (min-width: 768px) {
+            #desktop-footer {
+                display: block; /* 桌面版顯示在左側欄底部 */
+            }
+            #mobile-footer {
+                display: none !important; /* 桌面版隱藏固定底部欄 */
+            }
+        }
+        
+        /* 手機固定底部欄樣式 */
+        #mobile-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #44403c; /* stone-800 */
+            z-index: 50;
+            padding: 1rem;
+            box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.1);
+        }
+        /* 修正底部遮擋，增加底部填充 */
+        #main-content-area {
+            padding-bottom: 120px; /* 增加底部空間給手機footer */
+        }
+        @media (min-width: 768px) {
+            #main-content-area {
+                padding-bottom: 24px; /* 桌面版恢復正常 padding */
+            }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-0 md:p-4">
+
+    <!-- Kiosk 主容器 -->
+    <div id="kiosk-container" class="bg-white grid grid-cols-1 md:grid-cols-4 w-full">
+        
+        <!-- A. 桌面版左側欄 / 行動版頂部總結 (md:col-span-1) -->
+        <div id="summary-panel" class="md:col-span-1 bg-stone-800 text-white p-4 md:p-6 flex flex-col order-1 md:order-none max-h-56 md:max-h-full overflow-y-auto">
+            
+            <div class="flex-grow">
+                <h3 class="text-xl md:text-2xl font-bold text-emerald-400 mb-2 md:mb-4 border-b border-emerald-700 pb-2">
+                    當前客製化品項
+                </h3>
+                
+                <!-- 物料介紹區 -->
+                <div id="material-intro" class="mb-4 md:mb-6 h-auto md:h-36 bg-stone-700 p-3 rounded-lg text-xs md:text-sm transition-all duration-300">
+                    <p class="text-emerald-300 font-semibold mb-1">物料介紹：</p>
+                    <p class="text-stone-300" id="intro-text">請點選物料開始製作您的養生特調。</p>
+                </div>
+
+                <!-- 當前訂單總結 (單一品項) -->
+                <div id="current-drink" class="space-y-1 md:space-y-2 text-xs md:text-sm">
+                    <p class="text-stone-300"><span class="font-semibold text-emerald-300">基底：</span> <span id="summary-base">未選</span></p>
+                    <p class="text-stone-300"><span class="font-semibold text-emerald-300">配料：</span> <span id="summary-topping">未選</span></p>
+                    <p class="text-stone-300"><span class="font-semibold text-emerald-300">甜度：</span> <span id="summary-sweetener">無糖 (標配)</span></p>
+                    <p class="text-stone-300"><span class="font-semibold text-emerald-300">冰量/溫熱：</span> <span id="summary-ice">未選</span></p>
+                    <p class="text-stone-300"><span class="font-semibold text-emerald-300">數量：</span> <span id="summary-quantity">1</span></p>
+                    <p class="pt-2 text-base font-bold text-yellow-300">
+                        單品小計：<span id="current-price-summary">NT$ 0</span>
+                    </p>
+                </div>
+            </div>
+            
+            <!-- 桌面版底部固定區 (行動版會隱藏，改用 #mobile-footer) -->
+            <div id="desktop-footer" class="mt-4 md:mt-6 pt-4 border-t border-emerald-700">
+                <p class="text-lg font-bold flex justify-between items-center mb-2">
+                    購物車總額：
+                    <span id="total-cart-price-desktop" class="text-2xl text-red-400">NT$ 0</span>
+                </p>
+                <button id="view-cart-btn-desktop" class="w-full mt-2 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-stone-900 font-bold text-base transition duration-300">
+                    查看購物車 (<span id="cart-count-desktop">0</span>)
+                </button>
+                <button id="next-step-btn-desktop" class="w-full mt-2 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg transition duration-300" disabled>
+                    下一步
+                </button>
+            </div>
+        </div>
+
+        <!-- B. 主操作區 (md:col-span-3) -->
+        <div id="main-content-area" class="md:col-span-3 p-4 md:p-6 flex flex-col order-2 md:order-none overflow-y-auto">
+            
+            <!-- 品牌與步驟指示 -->
+            <header id="step-header" class="mb-4 md:mb-6">
+                <h1 class="text-3xl md:text-4xl font-bold text-emerald-700 mb-2 md:mb-3">
+                    仙 · 引導式點餐
+                </h1>
+                <div class="flex flex-wrap space-x-2 text-xs font-semibold uppercase">
+                    <span id="step-1-ind" class="step-indicator px-3 py-1 rounded-full bg-emerald-700 text-white active">1. 基底選擇</span>
+                    <span id="step-2-ind" class="step-indicator px-3 py-1 rounded-full bg-stone-300 text-stone-700">2. 配料添加</span>
+                    <span id="step-3-ind" class="step-indicator px-3 py-1 rounded-full bg-stone-300 text-stone-700">3. 甜度決定</span>
+                    <span id="step-4-ind" class="step-indicator px-3 py-1 rounded-full bg-stone-300 text-stone-700 mt-1 md:mt-0">4. 冰塊確認</span>
+                </div>
+            </header>
+
+            <!-- 選擇內容區 -->
+            <div id="selection-area" class="flex-grow">
+                <!-- Content will be dynamically injected here -->
+            </div>
+
+        </div>
+
+    </div>
+    
+    <!-- C. 行動版固定底部欄 (手機專用) -->
+    <div id="mobile-footer" class="md:hidden">
+        <p class="text-lg font-bold flex justify-between items-center text-white mb-2">
+            購物車總額：
+            <span id="total-cart-price-mobile" class="text-2xl text-red-400">NT$ 0</span>
+        </p>
+        <button id="view-cart-btn-mobile" class="w-full mt-2 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-stone-900 font-bold text-base transition duration-300">
+            查看購物車 (<span id="cart-count-mobile">0</span>)
+        </button>
+        <button id="next-step-btn-mobile" class="w-full mt-3 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg transition duration-300" disabled>
+            下一步
+        </button>
+    </div>
+
+    <script>
+        // --- 核心物料數據庫 (已新增冰塊/溫度選項) ---
+        const ICE_LEVELS = [
+            { id: 'hot', name: '熱', type: 'temp', selectable: true },
+            { id: 'warm', name: '溫', type: 'temp', selectable: true },
+            { id: 'micro-ice', name: '微冰', type: 'ice', selectable: true },
+            { id: 'less-ice', name: '少冰', type: 'ice', selectable: true },
+            { id: 'normal-ice', name: '正常冰', type: 'ice', selectable: true },
+            { id: 'no-ice', name: '去冰', type: 'ice', selectable: true }
+        ];
+
+        const Materials = {
+            base: [
+                { id: 'jasmine', name: '茉莉綠茶', price: 60, intro: '清新回甘，幫助提神。純天然茶葉沖泡，適合日間飲用。', type: '日茶', temp: 'cold/hot', imageUrl: './images/jasmine.jpg' },
+                { id: 'oolong', name: '高山烏龍', price: 65, intro: '口感醇厚，富含茶多酚，有助消脂解膩。', type: '日茶', temp: 'cold/hot', imageUrl: './images/oolong.jpg' },
+                { id: 'sparkling', name: '氣泡水', price: 70, intro: '零熱量、零負擔的清爽基底，促進體內循環，保持活力。', type: '日茶', temp: 'cold', imageUrl: './images/sparklingwater.jpg' },
+                { id: 'plum_wine', name: '養生梅酒', price: 150, intro: '夜間專供。低度數調飲，有助於舒緩身心，微醺養顏。', type: '夜酒', temp: 'hot', imageUrl: './images/umeshu.jpg' },
+            ],
+            topping: [
+                { id: 'ginseng', name: '人蔘片', price: 30, intro: '珍貴養生配料，有助提升元氣，滋補強身。', is_healthy: true, imageUrl: './images/inseng.jpg' },
+                { id: 'red_date', name: '紅棗', price: 20, intro: '天然甘甜，傳統養生配方，能養血安神。', is_healthy: true, imageUrl: './images/jujube.jpg' },
+                { id: 'pearl', name: '手工珍珠', price: 10, intro: '少量供應的經典口感，每日新鮮熬煮，建議減量添加。', is_healthy: false, imageUrl: './images/boba.jpg' },
+                { id: 'aloe', name: '蘆薈丁', price: 15, intro: '低卡飽足，幫助消化，口感清脆滑順。', is_healthy: true, imageUrl: './images/aloe.jpg' },
+            ],
+            sweetener: [
+                { id: 'none', name: '無糖 (標配)', price: 0, intro: '保持飲品純粹風味，是「仙」品牌的預設健康選項。', pay_for_sugar: false, imageUrl: 'https://placehold.co/800x600/cbd5e1/475569?text=無糖+標準健康' },
+                { id: 'honey', name: '天然蜂蜜', price: 15, intro: '付費選項。天然甜味劑，富含維生素，推薦給微奢享受者。', pay_for_sugar: true, imageUrl: './images/honey.jpg' },
+                { id: 'cane_sugar', name: '手炒蔗糖', price: 10, intro: '付費選項。傳統工藝熬製，增加飲品層次感，但請留意熱量。', pay_for_sugar: true, imageUrl: './images/sucrose.jpg' },
+            ]
+        };
+
+        // 應用程式狀態 (State)
+        let currentState = {
+            step: 1, // 當前步驟 (1-4, 5為購物車檢視)
+            selectedBase: null,
+            selectedTopping: null,
+            selectedSweetener: null,
+            
+            // 新增配置選項
+            selectedIce: null, 
+            selectedQuantity: 1, 
+            
+            currentCustomizationPrice: 0, // 當前單品總價
+            finalCart: [], // 購物車陣列
+            totalCartPrice: 0 // 購物車所有商品總價
+        };
+
+        // DOM 元素引用
+        const selectionArea = document.getElementById('selection-area');
+        
+        // 桌面版按鈕/價格
+        const nextStepBtnDesktop = document.getElementById('next-step-btn-desktop');
+        const totalPriceElDesktop = document.getElementById('total-cart-price-desktop');
+        const currentPriceSummaryEl = document.getElementById('current-price-summary');
+        const viewCartBtnDesktop = document.getElementById('view-cart-btn-desktop');
+        const cartCountDesktop = document.getElementById('cart-count-desktop');
+        
+        // 行動版按鈕/價格
+        const nextStepBtnMobile = document.getElementById('next-step-btn-mobile');
+        const totalPriceElMobile = document.getElementById('total-cart-price-mobile');
+        const viewCartBtnMobile = document.getElementById('view-cart-btn-mobile');
+        const cartCountMobile = document.getElementById('cart-count-mobile');
+
+        const introTextEl = document.getElementById('intro-text');
+        
+        // 總結面板 (單品客製化流程)
+        const summaryBase = document.getElementById('summary-base');
+        const summaryTopping = document.getElementById('summary-topping');
+        const summarySweetener = document.getElementById('summary-sweetener');
+        const summaryIce = document.getElementById('summary-ice');
+        const summaryQuantity = document.getElementById('summary-quantity');
+
+        // 步驟指示器
+        const stepIndicators = [
+            document.getElementById('step-1-ind'),
+            document.getElementById('step-2-ind'),
+            document.getElementById('step-3-ind'),
+            document.getElementById('step-4-ind') // 新增步驟 4
+        ];
+
+        // --- 核心邏輯函數 ---
+
+        /**
+         * 根據當前狀態更新步驟指示器外觀
+         */
+        function updateStepIndicators() {
+            stepIndicators.forEach((indicator, index) => {
+                indicator.classList.remove('active', 'bg-emerald-700', 'text-white', 'bg-emerald-800');
+                indicator.classList.add('bg-stone-300', 'text-stone-700');
+                
+                if (index + 1 === currentState.step) {
+                    indicator.classList.add('active', 'bg-emerald-700', 'text-white');
+                }
+                // 已完成的步驟顏色
+                if (index + 1 < currentState.step) {
+                    indicator.classList.remove('bg-stone-300', 'text-stone-700');
+                    indicator.classList.add('bg-emerald-800', 'text-white');
+                }
+            });
+        }
+
+        /**
+         * 更新單品訂單總結與價格
+         */
+        function updateSummary() {
+            currentState.currentCustomizationPrice = 0;
+            
+            // 1. 基底
+            if (currentState.selectedBase) {
+                currentState.currentCustomizationPrice += currentState.selectedBase.price;
+                summaryBase.textContent = `${currentState.selectedBase.name} (NT$ ${currentState.selectedBase.price})`;
+            } else {
+                summaryBase.textContent = '未選';
+            }
+
+            // 2. 配料
+            if (currentState.selectedTopping) {
+                currentState.currentCustomizationPrice += currentState.selectedTopping.price;
+                summaryTopping.textContent = `${currentState.selectedTopping.name} (+NT$ ${currentState.selectedTopping.price})`;
+            } else {
+                summaryTopping.textContent = '未選';
+            }
+
+            // 3. 甜度
+            if (currentState.selectedSweetener) {
+                currentState.currentCustomizationPrice += currentState.selectedSweetener.price;
+                summarySweetener.textContent = `${currentState.selectedSweetener.name} ${currentState.selectedSweetener.price > 0 ? '(+NT$ ' + currentState.selectedSweetener.price + ')' : ''}`;
+            } else {
+                summarySweetener.textContent = '無糖 (標配)';
+            }
+
+            // 4. 冰量/溫
+            if (currentState.selectedIce) {
+                summaryIce.textContent = currentState.selectedIce.name;
+            } else {
+                summaryIce.textContent = '未選';
+            }
+
+            // 5. 數量
+            summaryQuantity.textContent = currentState.selectedQuantity;
+
+            // 更新單品小計
+            const currentPriceText = `NT$ ${currentState.currentCustomizationPrice * currentState.selectedQuantity}`;
+            currentPriceSummaryEl.textContent = currentPriceText;
+
+            // 更新購物車總計
+            currentState.totalCartPrice = currentState.finalCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const cartPriceText = `NT$ ${currentState.totalCartPrice}`;
+            totalPriceElDesktop.textContent = cartPriceText;
+            totalPriceElMobile.textContent = cartPriceText;
+            
+            // 更新購物車數量
+            cartCountDesktop.textContent = currentState.finalCart.length;
+            cartCountMobile.textContent = currentState.finalCart.length;
+
+
+            // 檢查是否可以進入下一步 (或加入購物車)
+            let canProceed = false;
+            let btnText = '下一步';
+
+            if (currentState.step === 1 && currentState.selectedBase) {
+                canProceed = true;
+            } else if (currentState.step === 2) {
+                canProceed = true; // 配料可選可不選
+            } else if (currentState.step === 3 && currentState.selectedSweetener) {
+                canProceed = true;
+            } else if (currentState.step === 4 && currentState.selectedIce && currentState.selectedBase) {
+                canProceed = true;
+                btnText = '加入購物車並繼續';
+            } else if (currentState.step === 5) {
+                // 購物車頁面
+                canProceed = true;
+                btnText = '前往結帳';
+            }
+            
+            if (currentState.step < 5) {
+                nextStepBtnDesktop.textContent = btnText;
+                nextStepBtnMobile.textContent = btnText;
+            } else {
+                nextStepBtnDesktop.textContent = '前往結帳';
+                nextStepBtnMobile.textContent = '前往結帳';
+            }
+
+            // 購物車模式下，按鈕邏輯由 renderCartView 處理
+            if (currentState.step !== 5) {
+                nextStepBtnDesktop.disabled = !canProceed;
+                nextStepBtnMobile.disabled = !canProceed;
+            }
+        }
+
+        /**
+         * 渲染選項卡片 (步驟 1, 2, 3)
+         */
+        function renderOptions(category) {
+            selectionArea.innerHTML = '';
+            const data = Materials[category];
+            
+            const titleMap = {
+                base: '1. 選擇飲品基底',
+                topping: '2. 挑選養生配料 (可選可不選)',
+                sweetener: '3. 決定飲品甜度'
+            };
+            const subtitleMap = {
+                base: '（茶、果汁、氣泡水或夜間限定酒品）',
+                topping: '（人蔘、紅棗等高價值配料，點選查看功效）',
+                sweetener: '（「無糖」是標配，加糖需付費客製化）'
+            };
+            
+            const cardGridClass = 'grid grid-cols-2 lg:grid-cols-4 gap-4 pb-4'; 
+
+            const headerHTML = `
+                <h2 class="text-2xl md:text-3xl font-bold text-stone-900">${titleMap[category]}</h2>
+                <p class="text-stone-600 mb-4 md:mb-6">${subtitleMap[category]}</p>
+                <div class="${cardGridClass}">
+            `;
+            
+            let cardsHTML = '';
+            data.forEach(item => {
+                const selected = (category === 'base' && currentState.selectedBase && currentState.selectedBase.id === item.id) ||
+                                 (category === 'topping' && currentState.selectedTopping && currentState.selectedTopping.id === item.id) ||
+                                 (category === 'sweetener' && currentState.selectedSweetener && currentState.selectedSweetener.id === item.id);
+
+                const selectedClass = selected ? 'selected' : '';
+
+                const priceText = item.price > 0 ? `+NT$ ${item.price}` : (category === 'sweetener' ? 'NT$ 0' : `NT$ ${item.price}`);
+                const extraTag = item.type === '夜酒' ? '<span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">夜間限定</span>' : (item.is_healthy ? '<span class="text-xs bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full">養生嚴選</span>' : '');
+
+                cardsHTML += `
+                    <div class="choice-card p-3 border border-stone-300 rounded-xl bg-white shadow-sm flex flex-col h-full ${selectedClass}" data-id="${item.id}" data-category="${category}">
+                        <img src="${item.imageUrl}" alt="${item.name} 示意圖" class="material-image rounded-md mb-2" 
+                             onerror="this.onerror=null;this.src='https://placehold.co/400x100/e0f2f1/064e3b?text=${item.name} 圖片載入失敗'" />
+                        
+                        <div class="flex flex-col flex-grow">
+                            <div class="flex items-center justify-between mb-1">
+                                <h3 class="text-base md:text-lg font-semibold text-stone-900">${item.name}</h3>
+                                ${extraTag}
+                            </div>
+                            <p class="text-base md:text-lg font-bold text-emerald-600">${priceText}</p>
+                            <p class="text-xs md:text-sm text-stone-500 mt-1 flex-grow">${item.intro.split('，')[0]}...</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            selectionArea.innerHTML = headerHTML + cardsHTML + '</div>';
+            
+            // 添加事件監聽器
+            selectionArea.querySelectorAll('.choice-card').forEach(card => {
+                card.addEventListener('click', () => handleSelection(card, category));
+                card.addEventListener('mouseover', () => displayIntro(card, category));
+                card.addEventListener('mouseout', () => clearIntro());
+            });
+
+            // 首次渲染時，如果已經有選擇，則顯示其介紹
+            const selectedItem = currentState[`selected${category.charAt(0).toUpperCase() + category.slice(1)}`];
+            if (selectedItem) {
+                introTextEl.textContent = selectedItem.intro;
+            }
+        }
+
+        /**
+         * 渲染步驟 4：溫度與數量確認
+         */
+        function renderTemperatureAndQuantity() {
+            selectionArea.innerHTML = '';
+
+            const baseItem = currentState.selectedBase;
+            if (!baseItem) return; // 應該不會發生，但以防萬一
+            
+            const isColdAllowed = baseItem.temp.includes('cold');
+            const isHotAllowed = baseItem.temp.includes('hot');
+
+            // 根據基底溫控，篩選可選的冰塊/溫度選項
+            const filteredIceLevels = ICE_LEVELS.filter(level => {
+                if (!isHotAllowed && level.type === 'temp') return false; // 不允許熱飲，移除熱/溫
+                if (!isColdAllowed && level.type === 'ice') return false; // 不允許冷飲，移除所有冰塊
+                return true;
+            });
+            
+            // 預設選擇邏輯
+            if (!currentState.selectedIce) {
+                if (!isColdAllowed && isHotAllowed) {
+                    currentState.selectedIce = ICE_LEVELS.find(i => i.id === 'hot'); // 預設熱飲
+                } else if (isColdAllowed) {
+                    currentState.selectedIce = ICE_LEVELS.find(i => i.id === 'less-ice'); // 預設少冰
+                }
+            } else {
+                // 如果已選的冰量不符合當前基底，則重設
+                const validSelection = filteredIceLevels.find(i => i.id === currentState.selectedIce.id);
+                if (!validSelection) {
+                    currentState.selectedIce = filteredIceLevels[0]; // 預設為第一個有效選項
+                }
+            }
+
+            // --- 溫度/冰量選擇 HTML ---
+            let iceOptionsHTML = '';
+            filteredIceLevels.forEach(level => {
+                const selectedClass = currentState.selectedIce && currentState.selectedIce.id === level.id ? 'selected bg-emerald-600 text-white shadow-lg' : 'bg-stone-100 text-stone-700 hover:bg-stone-200';
+                
+                iceOptionsHTML += `
+                    <button class="w-full py-3 rounded-lg font-semibold border border-stone-300 transition-all ${selectedClass}" 
+                            data-ice-id="${level.id}" onclick="handleIceSelection('${level.id}')">
+                        ${level.name}
+                    </button>
+                `;
+            });
+
+            // --- 數量控制 HTML ---
+            const quantityControlHTML = `
+                <div class="flex items-center justify-center space-x-4 bg-white p-4 rounded-xl shadow-inner border border-stone-200 w-full max-w-sm mx-auto">
+                    <button onclick="handleQuantityChange(-1)" class="w-12 h-12 flex items-center justify-center text-3xl font-bold bg-stone-200 text-stone-700 rounded-full hover:bg-stone-300 transition"
+                            ${currentState.selectedQuantity <= 1 ? 'disabled' : ''}>
+                        -
+                    </button>
+                    <span class="text-4xl font-mono text-emerald-700 w-16 text-center">${currentState.selectedQuantity}</span>
+                    <button onclick="handleQuantityChange(1)" class="w-12 h-12 flex items-center justify-center text-3xl font-bold bg-stone-200 text-stone-700 rounded-full hover:bg-stone-300 transition">
+                        +
+                    </button>
+                </div>
+            `;
+
+            selectionArea.innerHTML = `
+                <h2 class="text-2xl md:text-3xl font-bold text-stone-900">4. 溫度與數量確認</h2>
+                <p class="text-stone-600 mb-6">請選擇飲品溫度/冰塊量，並確認訂購數量。</p>
+
+                <div class="space-y-8">
+                    <!-- 冰塊/溫度選擇區 -->
+                    <div>
+                        <h3 class="text-xl font-semibold text-stone-800 mb-3">溫/冰塊量選擇</h3>
+                        <div class="grid grid-cols-3 gap-3">
+                            ${iceOptionsHTML}
+                        </div>
+                    </div>
+
+                    <!-- 數量選擇區 -->
+                    <div>
+                        <h3 class="text-xl font-semibold text-stone-800 mb-3">品項數量</h3>
+                        ${quantityControlHTML}
+                    </div>
+                </div>
+            `;
+            
+            updateSummary();
+        }
+        
+        /**
+         * 渲染購物車檢視 (步驟 5)
+         */
+        function renderCartView() {
+            selectionArea.innerHTML = '';
+            
+            let cartItemsHTML = '';
+            if (currentState.finalCart.length === 0) {
+                 cartItemsHTML = `
+                    <div class="text-center p-8 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                        <p class="text-xl text-stone-500">購物車是空的！請返回第一步點餐。</p>
+                    </div>
+                 `;
+                 nextStepBtnDesktop.disabled = true;
+                 nextStepBtnMobile.disabled = true;
+            } else {
+                currentState.finalCart.forEach((item, index) => {
+                    const subtotal = item.price * item.quantity;
+                    cartItemsHTML += `
+                        <div class="bg-white p-4 rounded-xl shadow flex flex-col md:flex-row justify-between items-start md:items-center border border-stone-200">
+                            <div class="flex-grow mb-2 md:mb-0">
+                                <p class="text-lg font-bold text-emerald-700">${item.base.name}</p>
+                                <p class="text-sm text-stone-600">
+                                    ${item.topping ? `+ ${item.topping.name}` : ''} | 
+                                    ${item.sweetener.name} | 
+                                    ${item.ice.name}
+                                </p>
+                                <p class="text-sm font-bold text-stone-900 mt-1">
+                                    單價: NT$ ${item.price} | 數量: ${item.quantity}
+                                </p>
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                <span class="text-xl font-extrabold text-red-600">NT$ ${subtotal}</span>
+                                <button onclick="updateCartItemQuantity(${index}, -1)" class="w-8 h-8 flex items-center justify-center text-xl font-bold bg-stone-100 text-stone-700 rounded-full hover:bg-stone-200 transition">-</button>
+                                <button onclick="updateCartItemQuantity(${index}, 1)" class="w-8 h-8 flex items-center justify-center text-xl font-bold bg-stone-100 text-stone-700 rounded-full hover:bg-stone-200 transition">+</button>
+                                <button onclick="removeFromCart(${index})" class="text-red-500 hover:text-red-700 transition" title="移除品項">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                 nextStepBtnDesktop.disabled = false;
+                 nextStepBtnMobile.disabled = false;
+            }
+
+            selectionArea.innerHTML = `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-3xl font-bold text-stone-900">5. 購物車清單</h2>
+                        <button onclick="updateKioskView(1)" class="text-emerald-700 font-semibold hover:text-emerald-900 transition">
+                            « 返回基底選擇
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        ${cartItemsHTML}
+                    </div>
+
+                    <div class="pt-4 border-t-2 border-emerald-100 flex justify-between items-center font-extrabold text-xl text-stone-900">
+                        <span>總計金額:</span>
+                        <span class="text-red-600">NT$ ${currentState.totalCartPrice}</span>
+                    </div>
+                </div>
+            `;
+            
+            updateSummary();
+        }
+
+        /**
+         * 處理物料選擇邏輯 (步驟 1, 2, 3)
+         */
+        function handleSelection(card, category) {
+            const itemId = card.getAttribute('data-id');
+            const item = Materials[category].find(i => i.id === itemId);
+
+            // 清除當前分類的選擇狀態
+            selectionArea.querySelectorAll('.choice-card').forEach(c => c.classList.remove('selected'));
+            
+            // 設定新的選擇狀態
+            if (category === 'topping') {
+                 // 配料可重複點擊取消
+                if (currentState.selectedTopping && currentState.selectedTopping.id === item.id) {
+                     currentState.selectedTopping = null;
+                     card.classList.remove('selected');
+                     introTextEl.textContent = '請點選物料開始製作您的養生特調。';
+                     updateSummary();
+                     return;
+                } else {
+                     currentState.selectedTopping = item;
+                     card.classList.add('selected');
+                }
+            } else {
+                // 基底和甜度是單選
+                currentState[`selected${category.charAt(0).toUpperCase() + category.slice(1)}`] = item;
+                card.classList.add('selected');
+            }
+
+            // 選定後，將物料介紹固定顯示
+            introTextEl.textContent = item.intro;
+            
+            updateSummary();
+        }
+
+        /**
+         * 處理冰塊/溫度選擇 (步驟 4)
+         */
+        function handleIceSelection(iceId) {
+            const ice = ICE_LEVELS.find(i => i.id === iceId);
+            currentState.selectedIce = ice;
+            renderTemperatureAndQuantity(); // 重新渲染以更新選中狀態
+            updateSummary();
+        }
+
+        /**
+         * 處理數量增減 (步驟 4)
+         */
+        function handleQuantityChange(delta) {
+            currentState.selectedQuantity = Math.max(1, currentState.selectedQuantity + delta);
+            renderTemperatureAndQuantity(); // 重新渲染以更新數量顯示和按鈕狀態
+        }
+
+        /**
+         * 處理滑鼠懸停顯示物料介紹 (教育性引導)
+         */
+        function displayIntro(card, category) {
+            const itemId = card.getAttribute('data-id');
+            const item = Materials[category].find(i => i.id === itemId);
+            if (item) {
+                introTextEl.textContent = item.intro;
+            }
+        }
+
+        /**
+         * 清除介紹，回到已選擇項目的總結
+         */
+        function clearIntro() {
+             const categoryMap = { 1: 'Base', 2: 'Topping', 3: 'Sweetener' };
+             const selectedItem = currentState[`selected${categoryMap[currentState.step]}`];
+             
+             if (selectedItem) {
+                introTextEl.textContent = selectedItem.intro;
+            } else {
+                introTextEl.textContent = '請點選物料開始製作您的養生特調。';
+            }
+        }
+
+        /**
+         * 推進到下一個步驟 或 加入購物車
+         */
+        function nextStep() {
+            if (currentState.step === 4) {
+                // 步驟 4: 加入購物車
+                addItemToCart();
+                return;
+            }
+            if (currentState.step === 5) {
+                // 步驟 5: 結帳邏輯
+                selectionArea.innerHTML = `
+                    <div class="text-center p-8 md:p-12 bg-emerald-50 rounded-xl shadow-lg">
+                        <h2 class="text-3xl md:text-4xl font-bold text-emerald-700 mb-4">✅ 訂單已送出！</h2>
+                        <p class="text-lg md:text-xl text-stone-700 mb-6">您訂購的飲品總計：<span class="text-2xl md:text-3xl font-extrabold text-red-600">NT$ ${currentState.totalCartPrice}</span></p>
+                        <p class="text-stone-600">請掃描 QR Code 或於櫃檯支付。稍候片刻，您的養生特調即將完成！</p>
+                        <div class="mt-8">
+                            <button onclick="resetKiosk()" class="bg-stone-700 text-white px-6 py-3 rounded-full hover:bg-stone-900 transition">重新開始點餐</button>
+                        </div>
+                    </div>
+                `;
+                nextStepBtnDesktop.disabled = true;
+                nextStepBtnMobile.disabled = true;
+                return;
+            }
+
+            currentState.step += 1;
+            updateKioskView();
+        }
+
+        /**
+         * 將當前配置的飲品加入購物車並重設步驟
+         */
+        function addItemToCart() {
+            if (!currentState.selectedBase || !currentState.selectedSweetener || !currentState.selectedIce || currentState.selectedQuantity < 1) return;
+
+            // 重新計算單品價格 (以防中間有價格變動)
+            let itemPrice = currentState.selectedBase.price + currentState.selectedSweetener.price + (currentState.selectedTopping ? currentState.selectedTopping.price : 0);
+
+            const newItem = {
+                base: currentState.selectedBase,
+                topping: currentState.selectedTopping,
+                sweetener: currentState.selectedSweetener,
+                ice: currentState.selectedIce,
+                quantity: currentState.selectedQuantity,
+                price: itemPrice, // 單杯價格
+            };
+
+            currentState.finalCart.push(newItem);
+            
+            // 重設單品客製化狀態，準備下一杯
+            currentState.selectedBase = null;
+            currentState.selectedTopping = null;
+            currentState.selectedSweetener = null;
+            currentState.selectedIce = null;
+            currentState.selectedQuantity = 1;
+            currentState.step = 1;
+
+            alertMessage('已將飲品加入購物車！', 'success');
+            updateKioskView();
+        }
+
+        /**
+         * 更新購物車品項數量 (購物車頁面操作)
+         */
+        function updateCartItemQuantity(index, delta) {
+            const item = currentState.finalCart[index];
+            if (!item) return;
+
+            const newQuantity = Math.max(0, item.quantity + delta);
+
+            if (newQuantity === 0) {
+                removeFromCart(index);
+            } else {
+                currentState.finalCart[index].quantity = newQuantity;
+                renderCartView();
+                updateSummary();
+            }
+        }
+
+        /**
+         * 從購物車移除品項
+         */
+        function removeFromCart(index) {
+             currentState.finalCart.splice(index, 1);
+             renderCartView();
+             updateSummary();
+             alertMessage('已從購物車移除', 'info');
+        }
+
+        /**
+         * 顯示提示訊息 (取代 alert)
+         */
+        function alertMessage(message, type) {
+            // 這裡使用簡單的 console log 取代 alert/modal，保持程式碼簡潔
+            console.log(`[${type.toUpperCase()}] ${message}`);
+            // TODO: 在實際 Kiosk 介面上顯示一個小的彈出提示
+        }
+
+        /**
+         * 根據當前步驟渲染畫面
+         * @param {number} [step=currentState.step] - 可選，直接跳轉到特定步驟
+         */
+        function updateKioskView(step = currentState.step) {
+            currentState.step = step;
+            updateStepIndicators();
+            
+            // 隱藏步驟頭 (購物車頁面不需要)
+            const stepHeader = document.getElementById('step-header');
+            if (stepHeader) {
+                 stepHeader.style.display = (currentState.step < 5) ? 'block' : 'none';
+            }
+            
+
+            switch (currentState.step) {
+                case 1:
+                    renderOptions('base');
+                    break;
+                case 2:
+                    renderOptions('topping');
+                    break;
+                case 3:
+                    renderOptions('sweetener');
+                    // 甜度必須選
+                    if (!currentState.selectedSweetener) {
+                        currentState.selectedSweetener = Materials.sweetener.find(i => i.id === 'none');
+                    }
+                    updateSummary(); // 確保甜度被選後總結更新
+                    break;
+                case 4:
+                    // 檢查前置步驟是否完成
+                    if (!currentState.selectedBase || !currentState.selectedSweetener) {
+                        currentState.step = 1;
+                        updateKioskView();
+                        alertMessage('請先完成基底和甜度選擇！', 'error');
+                        return;
+                    }
+                    renderTemperatureAndQuantity();
+                    break;
+                case 5:
+                    renderCartView();
+                    break;
+                default:
+                    currentState.step = 1;
+                    updateKioskView();
+            }
+        }
+
+        /**
+         * 重設 Kiosk 狀態
+         */
+        function resetKiosk() {
+            currentState = {
+                step: 1,
+                selectedBase: null,
+                selectedTopping: null,
+                selectedSweetener: null,
+                selectedIce: null,
+                selectedQuantity: 1,
+                currentCustomizationPrice: 0,
+                finalCart: [],
+                totalCartPrice: 0
+            };
+            introTextEl.textContent = '請點選物料開始製作您的養生特調。';
+            updateKioskView();
+        }
+
+        // --- 初始化與事件監聽 ---
+        
+        // 確保兩個按鈕都觸發同一個 NextStep 函數
+        nextStepBtnDesktop.addEventListener('click', nextStep);
+        nextStepBtnMobile.addEventListener('click', nextStep);
+
+        // 查看購物車按鈕
+        viewCartBtnDesktop.addEventListener('click', () => updateKioskView(5));
+        viewCartBtnMobile.addEventListener('click', () => updateKioskView(5));
+        
+        updateKioskView(); // 啟動 Kiosk
+    </script>
+</body>
+</html>
