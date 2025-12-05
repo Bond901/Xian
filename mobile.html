@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>仙 (Xian) - Kiosk點餐流程模擬 (響應式)</title>
+    <title>仙 (Xian) - Kiosk點餐流程模擬 (響應式修正)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
-    <!-- 響應式佈局策略：移動優先。將頁面分為三層：頂部 Header (包含品牌與步驟)、中部 Scrollable 內容 (包含物料選擇與介紹)，底部 Fixed Footer (包含總價與結帳按鈕)。在 MD+ 螢幕上，則恢復為傳統的左右兩欄 Kiosk 佈局。 -->
+    <!-- 響應式佈局策略：已修正底部遮擋問題。在手機上，主內容區塊 (main-content-area) 增加了 120px 的底部填充，確保內容不會被固定底欄 (mobile-footer) 遮蓋。 -->
     
     <style>
         body {
@@ -112,7 +112,7 @@
             </div>
             
             <!-- 桌面版底部固定區 (行動版會隱藏，改用 #mobile-footer) -->
-            <div id="desktop-footer" class="mt-4 md:mt-6 pt-4 border-t border-emerald-500">
+            <div id="desktop-footer" class="mt-4 md:mt-6 pt-4 border-t border-emerald-700">
                 <p class="text-xl font-bold flex justify-between items-center">
                     總計金額：
                     <span id="total-price-desktop" class="text-3xl text-emerald-400">NT$ 0</span>
@@ -124,7 +124,8 @@
         </div>
 
         <!-- B. 主操作區 (md:col-span-3) -->
-        <div id="main-content-area" class="md:col-span-3 p-4 md:p-6 flex flex-col order-2 md:order-none overflow-y-auto pb-[90px] md:pb-0">
+        <!-- *** 修正點：將 pb-[90px] 增加到 pb-[120px] 以清除固定底欄 *** -->
+        <div id="main-content-area" class="md:col-span-3 p-4 md:p-6 flex flex-col order-2 md:order-none overflow-y-auto pb-[120px] md:pb-0">
             
             <!-- 品牌與步驟指示 -->
             <header class="mb-4 md:mb-6">
