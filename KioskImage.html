@@ -2,11 +2,10 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <!-- 關鍵！解決 iPhone 真機側邊欄消失與底部被蓋問題 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>仙 Xian - 養生特調 Kiosk</title>
+    <title>仙 Xian - 養生特調 Kiosk（展示版）</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
     
@@ -14,128 +13,53 @@
         :root {
             --safe-top: env(safe-area-inset-top);
             --safe-bottom: env(safe-area-inset-bottom);
-            --safe-left: env(safe-area-inset-left);
-            --safe-right: env(safe-area-inset-right);
         }
-        
-        body {
-            font-family: 'Noto Sans TC', sans-serif;
-            background: #0f0f0f;
-            margin: 0;
-            padding: 0;
-            min-height: 100dvh;
-            min-height: -webkit-fill-available;
-            overflow-x: hidden;
-        }
-        
-        html { height: -webkit-fill-available; }
-
+        body { font-family: 'Noto Sans TC', sans-serif; background: #0f0f0f; margin:0; min-height:100dvh; overflow-x:hidden; }
         #kiosk-container {
-            width: 100%;
-            min-height: 100dvh;
-            max-width: 1000px;
-            margin: 0 auto;
-            background: white;
-            display: grid;
-            grid-template-columns: 1fr;
-            grid-template-rows: auto 1fr;
-            padding: max(var(--safe-top), 1rem) max(var(--safe-left), 0px) 0 max(var(--safe-right), 0px);
+            width: 100%; min-height: 100dvh; max-width: 1000px; margin: 0 auto; background: white;
+            display: grid; grid-template-columns: 1fr; grid-template-rows: auto 1fr;
+            padding: max(var(--safe-top), 1rem) 0 0 0;
         }
-
         @media (min-width: 768px) {
             #kiosk-container {
-                height: 94dvh;
-                min-height: 800px;
-                margin: 2dvh auto;
-                border: 8px solid #1c1917;
-                border-radius: 24px;
-                overflow: hidden;
+                height: 94dvh; min-height: 800px; margin: 2dvh auto;
+                border: 8px solid #1c1917; border-radius: 24px; overflow: hidden;
                 box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-                grid-template-columns: 360px 1fr;
-                grid-template-rows: 1fr;
-                padding: 0;
+                grid-template-columns: 360px 1fr; grid-template-rows: 1fr;
             }
         }
-
-        /* 左側總結面板 */
         #summary-panel {
-            background: #1c1917;
-            color: white;
-            padding: 1.5rem;
+            background: #1c1917; color: white; padding: 1.5rem;
             padding-top: max(2rem, calc(var(--safe-top) + 1rem));
             padding-bottom: max(2rem, calc(var(--safe-bottom) + 1rem));
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
+            overflow-y: auto; -webkit-overflow-scrolling: touch;
         }
-
-        /* 主內容區 */
         #main-content-area {
             padding: 1.5rem;
             padding-bottom: calc(160px + var(--safe-bottom));
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
+            overflow-y: auto; -webkit-overflow-scrolling: touch;
         }
-
-        @media (min-width: 768px) {
-            #main-content-area { padding: 2rem; padding-bottom: 2rem; }
-        }
-
-        /* 手機專用固定底部欄 */
+        @media (min-width: 768px) { #main-content-area { padding: 2rem; padding-bottom: 2rem; } }
         #mobile-footer {
-            position: fixed;
-            left: max(var(--safe-left), 0px);
-            right: max(var(--safe-right), 0px);
-            bottom: max(var(--safe-bottom), 0px);
-            background: #1c1917;
-            padding: 1rem;
+            position: fixed; left: 0; right: 0; bottom: max(var(--safe-bottom), 0px);
+            background: #1c1917; padding: 1rem;
             padding-bottom: calc(1rem + var(--safe-bottom));
-            z-index: 9999;
-            box-shadow: 0 -10px 30px rgba(0,0,0,0.3);
-            border-top: 1px solid #334155;
+            z-index: 9999; box-shadow: 0 -10px 30px rgba(0,0,0,0.3);
         }
-
-        @media (min-width: 768px) {
-            #mobile-footer { display: none !important; }
-        }
-
-        .step-indicator { transition: all 0.3s ease; }
-        .step-indicator.active { 
-            background: #059669; color: white; 
-            transform: scale(1.12); box-shadow: 0 4px 15px rgba(5,150,105,0.4);
-        }
+        @media (min-width: 768px) { #mobile-footer { display: none !important; } }
         .choice-card {
-            transition: all 0.3s ease;
-            cursor: pointer;
-            border-radius: 20px;
-            overflow: hidden;
-            border: 4px solid transparent;
-            background: white;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s; cursor: pointer; border-radius: 20px; overflow: hidden;
+            border: 4px solid transparent; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.08);
         }
         .choice-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(5,150,105,0.25); }
-        .choice-card.selected { 
-            border-color: #10b981; 
-            transform: scale(1.04);
-            box-shadow: 0 0 0 4px rgba(16,185,129,0.2);
-        }
-        .material-image {
-            height: 220px;
-            width: 100%;
-            object-fit: cover;
-        }
-        .quantity-btn {
-            width: 72px; height: 72px;
-            border-radius: 50%;
-            font-size: 42px;
-            font-weight: bold;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-        }
+        .choice-card.selected { border-color: #10b981; transform: scale(1.04); box-shadow: 0 0 0 4px rgba(16,185,129,0.2); }
+        .material-image { height: 220px; width: 100%; object-fit: cover; }
+        .step-indicator.active { background: #059669; color: white; transform: scale(1.12); }
     </style>
 </head>
 <body class="flex items-center justify-center">
 
 <div id="kiosk-container" class="rounded-3xl overflow-hidden">
-
     <!-- 左側總結面板 -->
     <div id="summary-panel" class="flex flex-col">
         <div class="flex justify-between items-center mb-6 pb-4 border-b border-emerald-800">
@@ -144,12 +68,10 @@
                 購物車 (<span id="cart-count">0</span>)
             </button>
         </div>
-
         <div id="material-intro" class="mb-6 bg-stone-800/70 backdrop-blur p-5 rounded-2xl text-sm border border-emerald-900">
             <p class="text-emerald-300 font-bold mb-2">物料介紹：</p>
             <p id="intro-text" class="text-stone-200 leading-relaxed">請點選開始製作您的養生飲品</p>
         </div>
-
         <div class="space-y-4 text-sm flex-grow">
             <p><span class="text-emerald-300 font-bold">基底：</span> <span id="summary-base">未選</span></p>
             <p><span class="text-emerald-300 font-bold">配料：</span> <span id="summary-topping">無</span></p>
@@ -157,15 +79,12 @@
             <p><span class="text-emerald-300 font-bold">甜度：</span> <span id="summary-sweetener">無糖 (標配)</span></p>
             <p><span class="text-emerald-300 font-bold">數量：</span> <span id="summary-quantity">1</span> 杯</p>
         </div>
-
         <div class="hidden md:block mt-8 pt-6 border-t border-emerald-800">
             <div class="flex justify-between items-center mb-4">
                 <span class="text-2xl font-bold">總計金額</span>
                 <span id="total-price-desktop" class="text-5xl font-black text-emerald-400">NT$ 0</span>
             </div>
-            <button id="next-step-btn-desktop" class="w-full py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-2xl font-black transition shadow-2xl" disabled>
-                下一步
-            </button>
+            <button id="next-step-btn-desktop" class="w-full py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-2xl font-black transition shadow-2xl" disabled>下一步</button>
         </div>
     </div>
 
@@ -180,49 +99,46 @@
                 <span id="step-4-ind" class="step-indicator px-5 py-3 rounded-full bg-stone-400 text-white text-lg font-bold">4. 甜度</span>
             </div>
         </header>
-
         <div id="selection-area" class="flex-grow"></div>
     </div>
 </div>
 
-<!-- 手機底部固定欄 -->
+<!-- 手機底部欄 -->
 <div id="mobile-footer" class="md:hidden text-white">
     <div class="flex justify-between items-center mb-3">
         <span class="text-2xl font-bold">總計金額</span>
         <span id="total-price-mobile" class="text-4xl font-black text-emerald-400">NT$ 0</span>
     </div>
-    <button id="next-step-btn-mobile" class="w-full py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-2xl font-black transition shadow-2xl" disabled>
-        下一步
-    </button>
+    <button id="next-step-btn-mobile" class="w-full py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-2xl font-black transition shadow-2xl" disabled>下一步</button>
 </div>
 
 <script>
-    // 資料庫（使用高畫質實拍圖）
-        const Materials = {
-            base: [
-                { id: 'jasmine', name: '茉莉綠茶', price: 60, intro: '清新回甘，幫助提神。純天然茶葉沖泡，適合日間飲用。', type: '日茶', imageUrl: './images/jasmine.jpg' },
-                { id: 'oolong', name: '高山烏龍', price: 65, intro: '口感醇厚，富含茶多酚，有助消脂解膩。', type: '日茶', imageUrl: './images/oolong.jpg' },
-                { id: 'sparkling', name: '氣泡水', price: 70, intro: '零熱量、零負擔的清爽基底，促進體內循環，保持活力。', type: '日茶', imageUrl: './images/sparklingwater.jpg' },
-                { id: 'plum_wine', name: '養生梅酒', price: 150, intro: '夜間專供。低度數調飲，有助於舒緩身心，微醺養顏。', type: '夜酒', imageUrl: './images/umeshu.jpg' },
-            ],
-            topping: [
-                { id: 'ginseng', name: '人蔘片', price: 30, intro: '珍貴養生配料，有助提升元氣，滋補強身。', is_healthy: true, imageUrl: './images/inseng.jpg' },
-                { id: 'red_date', name: '紅棗', price: 20, intro: '天然甘甜，傳統養生配方，能養血安神。', is_healthy: true, imageUrl: './images/jujube.jpg' },
-                { id: 'pearl', name: '手工珍珠', price: 10, intro: '少量供應的經典口感，每日新鮮熬煮，建議減量添加。', is_healthy: false, imageUrl: './images/boba.jpg' },
-                { id: 'aloe', name: '蘆薈丁', price: 15, intro: '低卡飽足，幫助消化，口感清脆滑順。', is_healthy: true, imageUrl: './images/aloe.jpg' },
-            ],
-            sweetener: [
-                { id: 'none', name: '無糖 (標配)', price: 0, intro: '保持飲品純粹風味，是「仙」品牌的預設健康選項。', pay_for_sugar: false, imageUrl: 'https://placehold.co/800x600/cbd5e1/475569?text=無糖+標準健康' },
-                { id: 'honey', name: '天然蜂蜜', price: 15, intro: '付費選項。天然甜味劑，富含維生素，推薦給微奢享受者。', pay_for_sugar: true, imageUrl: './images/honey.jpg' },
-                { id: 'cane_sugar', name: '手炒蔗糖', price: 10, intro: '付費選項。傳統工藝熬製，增加飲品層次感，但請留意熱量。', pay_for_sugar: true, imageUrl: './images/sucrose.jpg' },
-            ]
-        };
+    // 你的原始資料（已修正欄位名稱為 imageUrl）
+    const Materials = {
+        base: [
+            { id: 'jasmine', name: '茉莉綠茶', price: 60, intro: '清新回甘，幫助提神。純天然茶葉沖泡，適合日間飲用。', type: '日茶', imageUrl: './images/jasmine.jpg' },
+            { id: 'oolong', name: '高山烏龍', price: 65, intro: '口感醇厚，富含茶多酚，有助消脂解膩。', type: '日茶', imageUrl: './images/oolong.jpg' },
+            { id: 'sparkling', name: '氣泡水', price: 70, intro: '零熱量、零負擔的清爽基底，促進體內循環，保持活力。', type: '日茶', imageUrl: './images/sparklingwater.jpg' },
+            { id: 'plum_wine', name: '養生梅酒', price: 150, intro: '夜間專供。低度數調飲，有助於舒緩身心，微醺養顏。', type: '夜酒', imageUrl: './images/umeshu.jpg' },
+        ],
+        topping: [
+            { id: 'ginseng', name: '人蔘片', price: 30, intro: '珍貴養生配料，有助提升元氣，滋補強身。', is_healthy: true, imageUrl: './images/inseng.jpg' },
+            { id: 'red_date', name: '紅棗', price: 20, intro: '天然甘甜，傳統養生配方，能養血安神。', is_healthy: true, imageUrl: './images/jujube.jpg' },
+            { id: 'pearl', name: '手工珍珠', price: 10, intro: '少量供應的經典口感，每日新鮮熬煮，建議減量添加。', is_healthy: false, imageUrl: './images/boba.jpg' },
+            { id: 'aloe', name: '蘆薈丁', price: 15, intro: '低卡飽足，幫助消化，口感清脆滑順。', is_healthy: true, imageUrl: './images/aloe.jpg' },
+        ],
+        sweetener: [
+            { id: 'none', name: '無糖 (標配)', price: 0, intro: '保持飲品純粹風味，是「仙」品牌的預設健康選項。', imageUrl: 'https://placehold.co/800x600/cbd5e1/475569?text=無糖+標準健康' },
+            { id: 'honey', name: '天然蜂蜜', price: 15, intro: '付費選項。天然甜味劑，富含維生素，推薦給微奢享受者。', imageUrl: './images/honey.jpg' },
+            { id: 'cane_sugar', name: '手炒蔗糖', price: 10, intro: '付費選項。傳統工藝熬製，增加飲品層次感，但請留意熱量。', imageUrl: './images/sucrose.jpg' },
+        ]
+    };
     const IceOptions = [
-        {id:'hot',name:'熱飲',intro:'暖心暖胃'},
-        {id:'warm',name:'溫飲',intro:'保護腸胃'},
-        {id:'less',name:'少冰',intro:'微涼不刺激'},
-        {id:'micro',name:'微冰',intro:'保留茶香'},
-        {id:'normal',name:'正常冰',intro:'經典冰涼'}
+        { id: 'hot', name: '熱飲', intro: '暖心暖胃，冬季首選' },
+        { id: 'warm', name: '溫飲', intro: '溫度適中，保護腸胃' },
+        { id: 'less', name: '少冰', intro: '微涼不刺激' },
+        { id: 'micro', name: '微冰', intro: '保留茶香' },
+        { id: 'normal', name: '正常冰', intro: '經典冰涼' }
     ];
     Materials.ice = IceOptions;
 
@@ -232,13 +148,9 @@
     const el = {
         area: document.getElementById('selection-area'),
         intro: document.getElementById('intro-text'),
-        summary: {
-            base: document.getElementById('summary-base'),
-            topping: document.getElementById('summary-topping'),
-            ice: document.getElementById('summary-ice'),
-            sugar: document.getElementById('summary-sweetener'),
-            qty: document.getElementById('summary-quantity')
-        },
+        summary: { base: document.getElementById('summary-base'), topping: document.getElementById('summary-topping'),
+                   ice: document.getElementById('summary-ice'), sugar: document.getElementById('summary-sweetener'),
+                   qty: document.getElementById('summary-quantity') },
         price: { d: document.getElementById('total-price-desktop'), m: document.getElementById('total-price-mobile') },
         btn: { d: document.getElementById('next-step-btn-desktop'), m: document.getElementById('next-step-btn-mobile') },
         cartCount: document.getElementById('cart-count'),
@@ -253,7 +165,7 @@
             else s.classList.add('bg-stone-500','text-white');
         });
 
-        let p = (state.base?.price||0) + (state.topping?.price||0) + (state.sugar?.price||0);
+        const p = (state.base?.price||0) + (state.topping?.price||0) + (state.sugar?.price||0);
         el.summary.base.textContent = state.base ? `${state.base.name} (NT$${state.base.price})` : '未選';
         el.summary.topping.textContent = state.topping ? `${state.topping.name} (+NT$${state.topping.price})` : '無';
         el.summary.ice.textContent = state.ice?.name || '未選';
@@ -284,7 +196,6 @@
     };
 
     const next = () => state.step===4 ? addToCart() : (state.step++, render());
-
     const addToCart = () => {
         if (!state.base || !state.ice) return alert('請完成必選項目！');
         cart.push({
@@ -310,14 +221,18 @@
 
         data.forEach(item => {
             const selected = state[map[state.step]]?.id === item.id;
-            const tag = item.type==='夜酒' ? '夜間限定' : (item.healthy ? '養生嚴選' : '');
+            const tag = item.type==='夜酒' ? '夜間限定' : (item.is_healthy ? '養生嚴選' : '');
+            const tagClass = item.type==='夜酒' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700';
+
             html += `
             <div class="choice-card ${selected?'selected':''}" data-id="${item.id}" data-category="${map[state.step]}">
-                <img src="${item.img}" class="material-image" onerror="this.src='https://placehold.co/800x600/064e3b/white?text=仙'">
+                <img src="${item.imageUrl || 'https://placehold.co/800x600/064e3b/white?text=圖片遺失'}" 
+                     class="material-image" 
+                     onerror="this.onerror=null; this.src='https://placehold.co/800x600/064e3b/white?text=仙';">
                 <div class="p-6">
                     <div class="flex justify-between items-start mb-3">
                         <h3 class="text-2xl font-bold">${item.name}</h3>
-                        ${tag?`<span class="text-sm px-4 py-2 rounded-full ${item.type==='夜酒'?'bg-red-100 text-red-700':'bg-emerald-100 text-emerald-700'} font-bold">${tag}</span>`:''}
+                        ${tag?`<span class="text-sm px-4 py-2 rounded-full ${tagClass} font-bold">${tag}</span>`:''}
                     </div>
                     <p class="text-3xl font-black text-emerald-600 mb-3">${item.price>0?'+'+item.price:'標配'}</p>
                     <p class="text-lg text-stone-600 leading-relaxed">${item.intro}</p>
@@ -331,9 +246,9 @@
             <div class="mt-16 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-3xl p-12 text-center">
                 <h3 class="text-4xl font-black mb-10">選擇數量</h3>
                 <div class="flex items-center justify-center gap-12">
-                    <button onclick="state.qty=Math.max(1,state.qty-1);document.getElementById('qty').value=state.qty;updateUI()" class="quantity-btn bg-red-500 hover:bg-red-600 text-white">-</button>
+                    <button onclick="state.qty=Math.max(1,state.qty-1);document.getElementById('qty').value=state.qty;updateUI()" class="w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 text-white text-5xl font-bold shadow-2xl">-</button>
                     <input id="qty" type="number" value="${state.qty}" min="1" class="w-40 text-7xl font-black text-center bg-transparent" onchange="state.qty=Math.max(1,parseInt(this.value)||1);updateUI()">
-                    <button onclick="state.qty++;document.getElementById('qty').value=state.qty;updateUI()" class="quantity-btn bg-sky-500 hover:bg-sky-600 text-white">+</button>
+                    <button onclick="state.qty++;document.getElementById('qty').value=state.qty;updateUI()" class="w-20 h-20 rounded-full bg-sky-500 hover:bg-sky-600 text-white text-5xl font-bold shadow-2xl">+</button>
                 </div>
             </div>`;
             if (!state.sugar) { state.sugar = Materials.sweetener[0]; updateUI(); }
@@ -343,6 +258,7 @@
         document.querySelectorAll('.choice-card').forEach(c => c.onclick = () => select(c, map[state.step]));
     };
 
+    // 購物車
     document.getElementById('view-cart-btn').onclick = () => {
         if (cart.length===0) {
             el.area.innerHTML = `<div class="text-center py-32"><h2 class="text-7xl font-black mb-10">購物車是空的</h2><button onclick="render()" class="bg-emerald-600 text-white px-16 py-8 rounded-full text-4xl hover:bg-emerald-700">開始點餐</button></div>`;
@@ -354,14 +270,9 @@
             <div class="space-y-6 mb-12">
                 ${cart.map(i=>`
                 <div class="bg-white rounded-3xl p-8 shadow-2xl flex justify-between items-center">
-                    <div>
-                        <div class="text-3xl font-black">${i.name} × ${i.qty}</div>
-                        <div class="text-xl text-stone-600 mt-2">${i.detail}</div>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-4xl font-black text-emerald-600">NT$ ${i.price}</div>
-                        <button onclick="cart=cart.filter(x=>x.id!==${i.id});updateUI();this.closest('.space-y-6').innerHTML='';document.getElementById('view-cart-btn').click()" class="text-red-500 text-lg mt-3">移除</button>
-                    </div>
+                    <div><div class="text-3xl font-black">${i.name} × ${i.qty}</div><div class="text-xl text-stone-600 mt-2">${i.detail}</div></div>
+                    <div class="text-right"><div class="text-4xl font-black text-emerald-600">NT$ ${i.price}</div>
+                    <button onclick="cart=cart.filter(x=>x.id!==${i.id});updateUI();render()" class="text-red-500 text-lg mt-3">移除</button></div>
                 </div>`).join('')}
             </div>
             <div class="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-3xl p-12 text-white text-center mb-12">
@@ -370,7 +281,7 @@
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <button onclick="render()" class="py-8 bg-stone-700 hover:bg-stone-800 text-white rounded-3xl text-3xl font-black">繼續點餐</button>
-                <button onclick="el.area.innerHTML='<div class=\\'text-center py-40\\'><h2 class=\\'text-8xl font-black text-emerald-600 mb-12\\'>訂單完成！</h2><p class=\\'text-5xl mb-16\\'>感謝您的光臨</p><div class=\\'text-9xl font-black text-emerald-700 mb-20\\'>NT$ ${total}</div><button onclick=\\'cart=[];render()\\' class=\\'bg-stone-800 text-white px-20 py-10 rounded-full text-5xl hover:bg-black\\'>再來一單</button></div>';updateUI()" class="py-8 bg-sky-600 hover:bg-sky-700 text-white rounded-3xl text-3xl font-black">立即結帳</button>
+                <button onclick="el.area.innerHTML='<div class=\"text-center py-40\"><h2 class=\"text-8xl font-black text-emerald-600 mb-12\">訂單完成！</h2><p class=\"text-5xl mb-16\">感謝您的光臨</p><div class=\"text-9xl font-black text-emerald-700 mb-20\">NT$ ${total}</div><button onclick=\"cart=[];render()\" class=\"bg-stone-800 text-white px-20 py-10 rounded-full text-5xl hover:bg-black\">再來一單</button></div>';updateUI()" class="py-8 bg-sky-600 hover:bg-sky-700 text-white rounded-3xl text-3xl font-black">立即結帳</button>
             </div>`;
     };
 
