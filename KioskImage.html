@@ -198,21 +198,25 @@
 
 <script>
     // 資料庫（使用高畫質實拍圖）
-    const Materials = { base: [
-        {id:'jasmine',name:'茉莉綠茶',price:60,intro:'清香回甘，提神醒腦',img:'https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=800'},
-        {id:'oolong',name:'高山烏龍',price:65,intro:'醇厚甘潤，助消化',img:'https://images.unsplash.com/photo-1570194061610-557d2b7e8ec9?w=800'},
-        {id:'sparkling',name:'氣泡水',price:70,intro:'零熱量清爽基底',img:'https://images.unsplash.com/photo-1557177324-56c542165309?w=800'},
-        {id:'plum_wine',name:'養生梅酒',price:150,intro:'夜間限定，微醺養顏',img:'https://images.unsplash.com/photo-1516591733114-962a31c103b9?w=800',type:'夜酒'}
-    ], topping: [
-        {id:'ginseng',name:'人蔘片',price:30,intro:'補氣養神，珍稀聖品',img:'https://images.unsplash.com/photo-1615485737390-06e3c8f0c9b1?w=800',healthy:true},
-        {id:'red_date',name:'紅棗',price:20,intro:'補血安神',img:'https://images.unsplash.com/photo-1571571734590-46c2e6e0b3d6?w=800',healthy:true},
-        {id:'pearl',name:'手工珍珠',price:10,intro:'Q彈經典',img:'https://images.unsplash.com/photo-1550518068-3297a5c32fb9?w=800'},
-        {id:'aloe',name:'蘆薈丁',price:15,intro:'清脆低卡',img:'https://images.unsplash.com/photo-1622801233-28d2993e5c63?w=800',healthy:true}
-    ], sweetener: [
-        {id:'none',name:'無糖 (標配)',price:0,intro:'健康首選，保留原味',img:'https://images.unsplash.com/photo-1519985176271-0d5d22f1e49c?w=800'},
-        {id:'honey',name:'天然蜂蜜',price:15,intro:'純天然甜味',img:'https://images.unsplash.com/photo-1558648472-16f01ae9d8dc?w=800'},
-        {id:'cane_sugar',name:'手炒蔗糖',price:10,intro:'香氣濃郁',img:'https://images.unsplash.com/photo-1606890737729-82d9ef7a18e0?w=800'}
-    ]};
+        const Materials = {
+            base: [
+                { id: 'jasmine', name: '茉莉綠茶', price: 60, intro: '清新回甘，幫助提神。純天然茶葉沖泡，適合日間飲用。', type: '日茶', imageUrl: './images/jasmine.jpg' },
+                { id: 'oolong', name: '高山烏龍', price: 65, intro: '口感醇厚，富含茶多酚，有助消脂解膩。', type: '日茶', imageUrl: './images/oolong.jpg' },
+                { id: 'sparkling', name: '氣泡水', price: 70, intro: '零熱量、零負擔的清爽基底，促進體內循環，保持活力。', type: '日茶', imageUrl: './images/sparklingwater.jpg' },
+                { id: 'plum_wine', name: '養生梅酒', price: 150, intro: '夜間專供。低度數調飲，有助於舒緩身心，微醺養顏。', type: '夜酒', imageUrl: './images/umeshu.jpg' },
+            ],
+            topping: [
+                { id: 'ginseng', name: '人蔘片', price: 30, intro: '珍貴養生配料，有助提升元氣，滋補強身。', is_healthy: true, imageUrl: './images/inseng.jpg' },
+                { id: 'red_date', name: '紅棗', price: 20, intro: '天然甘甜，傳統養生配方，能養血安神。', is_healthy: true, imageUrl: './images/jujube.jpg' },
+                { id: 'pearl', name: '手工珍珠', price: 10, intro: '少量供應的經典口感，每日新鮮熬煮，建議減量添加。', is_healthy: false, imageUrl: './images/boba.jpg' },
+                { id: 'aloe', name: '蘆薈丁', price: 15, intro: '低卡飽足，幫助消化，口感清脆滑順。', is_healthy: true, imageUrl: './images/aloe.jpg' },
+            ],
+            sweetener: [
+                { id: 'none', name: '無糖 (標配)', price: 0, intro: '保持飲品純粹風味，是「仙」品牌的預設健康選項。', pay_for_sugar: false, imageUrl: 'https://placehold.co/800x600/cbd5e1/475569?text=無糖+標準健康' },
+                { id: 'honey', name: '天然蜂蜜', price: 15, intro: '付費選項。天然甜味劑，富含維生素，推薦給微奢享受者。', pay_for_sugar: true, imageUrl: './images/honey.jpg' },
+                { id: 'cane_sugar', name: '手炒蔗糖', price: 10, intro: '付費選項。傳統工藝熬製，增加飲品層次感，但請留意熱量。', pay_for_sugar: true, imageUrl: './images/sucrose.jpg' },
+            ]
+        };
     const IceOptions = [
         {id:'hot',name:'熱飲',intro:'暖心暖胃'},
         {id:'warm',name:'溫飲',intro:'保護腸胃'},
