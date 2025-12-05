@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>仙 (Xian) - Kiosk點餐流程模擬 (圖片尺寸建議)</title>
+    <title>仙 (Xian) - Kiosk點餐流程模擬 (完整功能版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -83,6 +83,29 @@
             padding: 1rem;
             box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.1);
         }
+        /* 數量選擇器的樣式 */
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+        .quantity-btn {
+            background-color: #38bdf8; /* sky-400 */
+            color: white;
+            padding: 0.5rem 1rem;
+            font-size: 1.25rem;
+            border-radius: 9999px;
+            line-height: 1;
+        }
+        .quantity-input {
+            width: 4rem;
+            text-align: center;
+            font-size: 1.25rem;
+            font-weight: bold;
+            border: none;
+            background: transparent;
+        }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-0 md:p-4">
@@ -93,9 +116,14 @@
         <!-- A. 桌面版左側欄 / 行動版頂部總結 (md:col-span-1) -->
         <div id="summary-panel" class="md:col-span-1 bg-stone-800 text-white p-4 md:p-6 flex flex-col order-1 md:order-none max-h-56 md:max-h-full overflow-y-auto">
             <div>
-                <h3 class="text-xl md:text-2xl font-bold text-emerald-400 mb-2 md:mb-4 border-b border-emerald-700 pb-2">
-                    您的客製化飲品
-                </h3>
+                <div class="flex justify-between items-center mb-4 border-b border-emerald-700 pb-2">
+                    <h3 class="text-xl md:text-2xl font-bold text-emerald-400">
+                        您的客製化飲品
+                    </h3>
+                    <button id="view-cart-btn" class="bg-sky-500 hover:bg-sky-600 text-white px-3 py-1 rounded-full text-sm font-semibold transition" onclick="renderCart()">
+                        購物車 (<span id="cart-count">0</span>)
+                    </button>
+                </div>
                 
                 <!-- 物料介紹區 -->
                 <div id="material-intro" class="mb-4 md:mb-6 h-auto md:h-36 bg-stone-700 p-3 rounded-lg text-xs md:text-sm transition-all duration-300">
@@ -107,7 +135,9 @@
                 <div id="current-drink" class="space-y-1 md:space-y-2 text-xs md:text-sm">
                     <p class="text-stone-300"><span class="font-semibold text-emerald-300">基底：</span> <span id="summary-base">未選</span></p>
                     <p class="text-stone-300"><span class="font-semibold text-emerald-300">配料：</span> <span id="summary-topping">未選</span></p>
+                    <p class="text-stone-300"><span class="font-semibold text-emerald-300">冰量/溫度：</span> <span id="summary-ice">未選</span></p>
                     <p class="text-stone-300"><span class="font-semibold text-emerald-300">甜度：</span> <span id="summary-sweetener">無糖 (標配)</span></p>
+                    <p class="text-stone-300"><span class="font-semibold text-emerald-300">數量：</span> <span id="summary-quantity">1</span> 杯</p>
                 </div>
             </div>
             
@@ -135,7 +165,8 @@
                 <div class="flex space-x-2 text-xs font-semibold uppercase">
                     <span id="step-1-ind" class="step-indicator px-3 py-1 rounded-full bg-emerald-700 text-white active">1. 基底選擇</span>
                     <span id="step-2-ind" class="step-indicator px-3 py-1 rounded-full bg-stone-300 text-stone-700">2. 配料添加</span>
-                    <span id="step-3-ind" class="step-indicator px-3 py-1 rounded-full bg-stone-300 text-stone-700">3. 甜度決定</span>
+                    <span id="step-3-ind" class="step-indicator px-3 py-1 rounded-full bg-stone-300 text-stone-700">3. 冰量/溫度</span>
+                    <span id="step-4-ind" class="step-indicator px-3 py-1 rounded-full bg-stone-300 text-stone-700">4. 甜度決定</span>
                 </div>
             </header>
 
@@ -170,7 +201,7 @@
             ],
             topping: [
                 { id: 'ginseng', name: '人蔘片', price: 30, intro: '珍貴養生配料，有助提升元氣，滋補強身。', is_healthy: true, imageUrl: './images/inseng.jpg' },
-                { id: 'red_date', name: '紅棗', price: 20, intro: '天然甘甜，傳統養生配方，能養血安神。', is_healthy: true, imageUrl: './images/jujube.jpg' },
+                { id: 'red_date', name: '紅棗', price: 20, intro: '天然甘甜，傳統養生配方，能養血安神。', is_healthy: true, imageUrl: './images/Jujube.jpg' },
                 { id: 'pearl', name: '手工珍珠', price: 10, intro: '少量供應的經典口感，每日新鮮熬煮，建議減量添加。', is_healthy: false, imageUrl: './images/boba.jpg' },
                 { id: 'aloe', name: '蘆薈丁', price: 15, intro: '低卡飽足，幫助消化，口感清脆滑順。', is_healthy: true, imageUrl: './images/aloe.jpg' },
             ],
@@ -180,14 +211,26 @@
                 { id: 'cane_sugar', name: '手炒蔗糖', price: 10, intro: '付費選項。傳統工藝熬製，增加飲品層次感，但請留意熱量。', pay_for_sugar: true, imageUrl: './images/sucrose.jpg' },
             ]
         };
+        // 冰量/溫度選項
+        const IceOptions = [
+            { id: 'hot', name: '熱飲', price: 0, intro: '適合冬季，提供熱飲選擇。' },
+            { id: 'warm', name: '溫', price: 0, intro: '溫飲，溫度適中。' },
+            { id: 'less', name: '少冰', price: 0, intro: '少冰，冰塊量減少，適合不喜歡太冰的人。' },
+            { id: 'micro', name: '微冰', price: 0, intro: '微冰，幾乎沒冰塊，適合保存原味。' },
+            { id: 'normal', name: '正常冰', price: 0, intro: '正常冰，經典冰塊量，冰涼暢快。' },
+        ];
+        Materials.ice = IceOptions; // 加入冰選項到資料庫
 
         // 應用程式狀態 (State)
+        let shoppingCart = []; // 儲存已加入購物車的品項
         let currentState = {
             step: 1,
+            quantity: 1, // 預設數量為 1
             selectedBase: null,
             selectedTopping: null,
+            selectedIce: null,
             selectedSweetener: null,
-            totalPrice: 0
+            totalPrice: 0 // 單杯單價
         };
 
         // DOM 元素引用
@@ -206,13 +249,17 @@
         // 總結面板
         const summaryBase = document.getElementById('summary-base');
         const summaryTopping = document.getElementById('summary-topping');
+        const summaryIce = document.getElementById('summary-ice');
         const summarySweetener = document.getElementById('summary-sweetener');
+        const summaryQuantity = document.getElementById('summary-quantity');
+        const cartCountEl = document.getElementById('cart-count');
 
-        // 步驟指示器
+        // 步驟指示器 (4步)
         const stepIndicators = [
             document.getElementById('step-1-ind'),
             document.getElementById('step-2-ind'),
-            document.getElementById('step-3-ind')
+            document.getElementById('step-3-ind'),
+            document.getElementById('step-4-ind')
         ];
 
         // --- 核心邏輯函數 ---
@@ -255,28 +302,42 @@
                 summaryTopping.textContent = '未選';
             }
 
+            if (currentState.selectedIce) {
+                // 冰塊不加價
+                summaryIce.textContent = currentState.selectedIce.name;
+            } else {
+                summaryIce.textContent = '未選';
+            }
+
             if (currentState.selectedSweetener) {
                 currentState.totalPrice += currentState.selectedSweetener.price;
-                summarySweetener.textContent = `${currentState.selectedSweetener.name} ${currentState.selectedSweetener.price > 0 ? '(+NT$ ' + currentState.selectedSweetener.price + ')' : ''}`;
+                summarySweetener.textContent = `${currentState.selectedSweetener.name} ${currentState.selectedSweetener.price > 0? '(+NT$ ' + currentState.selectedSweetener.price + ')' : ''}`;
             } else {
                 summarySweetener.textContent = '無糖 (標配)';
             }
             
-            const priceText = `NT$ ${currentState.totalPrice}`;
+            summaryQuantity.textContent = currentState.quantity;
+            const finalPrice = currentState.totalPrice * currentState.quantity;
+            const priceText = `NT$ ${finalPrice}`;
             totalPriceElDesktop.textContent = priceText;
             totalPriceElMobile.textContent = priceText;
+
+            // 更新購物車數量顯示
+            cartCountEl.textContent = shoppingCart.length;
 
             // 檢查是否可以進入下一步
             let canProceed = false;
             if (currentState.step === 1 && currentState.selectedBase) {
                 canProceed = true;
             } else if (currentState.step === 2) {
-                canProceed = true; // 配料可選可不選，故可隨時進入下一步
-            } else if (currentState.step === 3 && currentState.selectedSweetener) {
+                canProceed = true; // 配料可選可不選
+            } else if (currentState.step === 3 && currentState.selectedIce) {
+                canProceed = true;
+            } else if (currentState.step === 4 && currentState.selectedSweetener) {
                 canProceed = true;
             }
             
-            const btnText = currentState.step === 3 ? '確認訂單並結帳' : '下一步';
+            const btnText = currentState.step === 4? `加入購物車 (共${finalPrice}元)` : '下一步';
             
             nextStepBtnDesktop.disabled = !canProceed;
             nextStepBtnDesktop.textContent = btnText;
@@ -286,92 +347,21 @@
         }
 
         /**
-         * 渲染選項卡片
-         * @param {string} category - base, topping, or sweetener
-         */
-        function renderOptions(category) {
-            selectionArea.innerHTML = '';
-            const data = Materials[category];
-            
-            const titleMap = {
-                base: '1. 選擇飲品基底',
-                topping: '2. 挑選養生配料 (可選可不選)',
-                sweetener: '3. 決定飲品甜度'
-            };
-            const subtitleMap = {
-                base: '（茶、果汁、氣泡水或夜間限定酒品）',
-                topping: '（人蔘、紅棗等高價值配料，點選查看功效）',
-                sweetener: '（「無糖」是標配，加糖需付費客製化）'
-            };
-            
-            // 手機版兩欄，桌面版四欄
-            const cardGridClass = 'grid grid-cols-2 lg:grid-cols-4 gap-4 pb-4'; 
-
-            const headerHTML = `
-                <h2 class="text-2xl md:text-3xl font-bold text-stone-900">${titleMap[category]}</h2>
-                <p class="text-stone-600 mb-4 md:mb-6">${subtitleMap[category]}</p>
-                <div class="${cardGridClass}">
-            `;
-            
-            let cardsHTML = '';
-            data.forEach(item => {
-                const selectedClass = (category === 'base' && currentState.selectedBase && currentState.selectedBase.id === item.id) ||
-                                      (category === 'topping' && currentState.selectedTopping && currentState.selectedTopping.id === item.id) ||
-                                      (category === 'sweetener' && currentState.selectedSweetener && currentState.selectedSweetener.id === item.id)
-                                      ? 'selected' : '';
-
-                const priceText = item.price > 0 ? `+NT$ ${item.price}` : (category === 'sweetener' ? 'NT$ 0' : `NT$ ${item.price}`);
-                const extraTag = item.type === '夜酒' ? '<span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">夜間限定</span>' : (item.is_healthy ? '<span class="text-xs bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full">養生嚴選</span>' : '');
-
-                cardsHTML += `
-                    <div class="choice-card p-3 border border-stone-300 rounded-xl bg-white shadow-sm flex flex-col h-full ${selectedClass}" data-id="${item.id}" data-category="${category}">
-                        <!-- 圖片部分：建議使用 800x600 的實拍圖 -->
-                        <img src="${item.imageUrl}" alt="${item.name} 示意圖" class="material-image rounded-md mb-2" 
-                             onerror="this.onerror=null;this.src='https://placehold.co/400x100/e0f2f1/064e3b?text=圖片載入失敗'" />
-                        
-                        <!-- 文字資訊部分 -->
-                        <div class="flex flex-col flex-grow">
-                            <div class="flex items-center justify-between mb-1">
-                                <h3 class="text-base md:text-lg font-semibold text-stone-900">${item.name}</h3>
-                                ${extraTag}
-                            </div>
-                            <p class="text-base md:text-lg font-bold text-emerald-600">${priceText}</p>
-                            <p class="text-xs md:text-sm text-stone-500 mt-1 flex-grow">${item.intro.split('，')[0]}...</p>
-                        </div>
-                    </div>
-                `;
-            });
-
-            selectionArea.innerHTML = headerHTML + cardsHTML + '</div>';
-            
-            // 添加事件監聽器
-            selectionArea.querySelectorAll('.choice-card').forEach(card => {
-                card.addEventListener('click', () => handleSelection(card, category));
-                card.addEventListener('mouseover', () => displayIntro(card, category));
-                card.addEventListener('mouseout', () => clearIntro());
-            });
-
-            // 首次渲染時，如果已經有選擇，則顯示其介紹
-            if (category === 'base' && currentState.selectedBase) {
-                introTextEl.textContent = currentState.selectedBase.intro;
-            } else if (category === 'topping' && currentState.selectedTopping) {
-                 introTextEl.textContent = currentState.selectedTopping.intro;
-            } else if (category === 'sweetener' && currentState.selectedSweetener) {
-                 introTextEl.textContent = currentState.selectedSweetener.intro;
-            }
-        }
-
-        /**
-         * 處理物料選擇邏輯
+         * 處理物料選擇 (base, topping, ice, sweetener)
          */
         function handleSelection(card, category) {
             const itemId = card.getAttribute('data-id');
-            const item = Materials[category].find(i => i.id === itemId);
+            let item;
+            if (category === 'ice') {
+                item = IceOptions.find(i => i.id === itemId);
+            } else {
+                item = Materials[category].find(i => i.id === itemId);
+            }
 
-            // 清除當前分類的選擇狀態
-            selectionArea.querySelectorAll('.choice-card').forEach(c => c.classList.remove('selected'));
+            // 清除當前分類的選擇
+            selectionArea.querySelectorAll(`.choice-card[data-category="${category}"]`).forEach(c => c.classList.remove('selected'));
             
-            // 設定新的選擇狀態
+            // 設定新的選擇
             card.classList.add('selected');
 
             switch (category) {
@@ -379,7 +369,6 @@
                     currentState.selectedBase = item;
                     break;
                 case 'topping':
-                    // 配料可重複點擊取消
                     if (currentState.selectedTopping && currentState.selectedTopping.id === item.id) {
                          currentState.selectedTopping = null;
                          card.classList.remove('selected');
@@ -387,12 +376,15 @@
                          currentState.selectedTopping = item;
                     }
                     break;
+                case 'ice':
+                    currentState.selectedIce = item;
+                    break;
                 case 'sweetener':
                     currentState.selectedSweetener = item;
                     break;
             }
 
-            // 選定後，將物料介紹固定顯示
+            // 固定顯示介紹
             introTextEl.textContent = item.intro;
             
             updateSummary();
@@ -403,7 +395,12 @@
          */
         function displayIntro(card, category) {
             const itemId = card.getAttribute('data-id');
-            const item = Materials[category].find(i => i.id === itemId);
+            let item;
+            if (category === 'ice') {
+                item = IceOptions.find(i => i.id === itemId);
+            } else {
+                item = Materials[category].find(i => i.id === itemId);
+            }
             if (item) {
                 introTextEl.textContent = item.intro;
             }
@@ -417,7 +414,9 @@
                 introTextEl.textContent = currentState.selectedBase.intro;
             } else if (currentState.step === 2 && currentState.selectedTopping) {
                 introTextEl.textContent = currentState.selectedTopping.intro;
-            } else if (currentState.step === 3 && currentState.selectedSweetener) {
+            } else if (currentState.step === 3 && currentState.selectedIce) {
+                introTextEl.textContent = currentState.selectedIce.intro;
+            } else if (currentState.step === 4 && currentState.selectedSweetener) {
                 introTextEl.textContent = currentState.selectedSweetener.intro;
             } else {
                 introTextEl.textContent = '請點選物料開始製作您的養生特調。';
@@ -425,18 +424,92 @@
         }
 
         /**
-         * 推進到下一個步驟
+         * 更新單品數量
+         */
+        function updateQuantity(delta) {
+            const newQuantity = currentState.quantity + delta;
+            if (newQuantity >= 1) {
+                currentState.quantity = newQuantity;
+                const inputEl = document.getElementById('drink-quantity-input');
+                if (inputEl) inputEl.value = newQuantity;
+                updateSummary();
+            }
+        }
+        
+        function updateQuantityInput(value) {
+            const newQuantity = parseInt(value);
+            if (!isNaN(newQuantity) && newQuantity >= 1) {
+                currentState.quantity = newQuantity;
+            } else {
+                currentState.quantity = 1;
+            }
+            updateSummary();
+        }
+
+        /**
+         * 推進步驟或加入購物車
          */
         function nextStep() {
-            if (currentState.step === 3) {
-                // 結帳邏輯
-                selectionArea.innerHTML = `
-                    <div class="text-center p-8 md:p-12 bg-emerald-50 rounded-xl shadow-lg">
-                        <h2 class="text-3xl md:text-4xl font-bold text-emerald-700 mb-4">✅ 訂單已送出！</h2>
-                        <p class="text-lg md:text-xl text-stone-700 mb-6">您訂購的客製化飲品總計：<span class="text-2xl md:text-3xl font-extrabold text-emerald-600">${totalPriceElMobile.textContent}</span></p>
-                        <p class="text-stone-600">請掃描 QR Code 或於櫃檯支付。稍候片刻，您的養生特調即將完成！</p>
+            if (currentState.step === 4) {
+                addToCart();
+            } else {
+                currentState.step += 1;
+                updateKioskView();
+            }
+        }
+        
+        /**
+         * 將當前客製化飲品加入購物車
+         */
+        function addToCart() {
+            if (!currentState.selectedBase || !currentState.selectedIce || !currentState.selectedSweetener) {
+                alert("請完成基底、冰量/溫度和甜度選擇！");
+                return;
+            }
+            
+            const itemName = `${currentState.selectedBase.name} (${currentState.selectedIce.name}/${currentState.selectedSweetener.name})`;
+            const item = {
+                id: Date.now(),
+                name: itemName,
+                base: currentState.selectedBase.name,
+                topping: currentState.selectedTopping? currentState.selectedTopping.name : '無',
+                ice: currentState.selectedIce.name,
+                sweetener: currentState.selectedSweetener.name,
+                unitPrice: currentState.totalPrice,
+                quantity: currentState.quantity,
+                totalPrice: currentState.totalPrice * currentState.quantity
+            };
+            
+            shoppingCart.push(item);
+            
+            // 重置選擇狀態 (保留購物車)
+            currentState = {
+                step: 1,
+                quantity: 1,
+                selectedBase: null,
+                selectedTopping: null,
+                selectedIce: null,
+                selectedSweetener: null,
+                totalPrice: 0
+            };
+            introTextEl.textContent = '請點選物料開始製作您的養生特調。';
+            updateKioskView(); // 回到步驟1
+
+            alert(`已將 ${item.quantity} 杯 ${item.name} 加入購物車！`);
+            renderCart(); // 顯示購物車
+        }
+
+        /**
+         * 渲染購物車檢視/結帳畫面
+         */
+        function renderCart() {
+            if (shoppingCart.length === 0) {
+                 selectionArea.innerHTML = `
+                    <div class="text-center p-8 md:p-12 bg-stone-50 rounded-xl shadow-lg">
+                        <h2 class="text-3xl font-bold text-stone-900 mb-4">🛒 購物車是空的</h2>
+                        <p class="text-lg text-stone-700 mb-6">請先客製化您的第一杯養生特調！</p>
                         <div class="mt-8">
-                            <button onclick="resetKiosk()" class="bg-stone-700 text-white px-6 py-3 rounded-full hover:bg-stone-900 transition">重新開始點餐</button>
+                            <button onclick="resetKiosk()" class="bg-emerald-600 text-white px-6 py-3 rounded-full hover:bg-emerald-700 transition">開始點餐</button>
                         </div>
                     </div>
                 `;
@@ -444,9 +517,74 @@
                 nextStepBtnMobile.disabled = true;
                 return;
             }
+            
+            let totalCartPrice = shoppingCart.reduce((sum, item) => sum + item.totalPrice, 0);
+            
+            let cartItemsHTML = shoppingCart.map(item => `
+                <div class="flex justify-between items-center py-3 border-b border-stone-200">
+                    <div class="flex-grow">
+                        <p class="font-bold text-lg">${item.name} x ${item.quantity}</p>
+                        <p class="text-sm text-stone-500">配料: ${item.topping} | 單價: NT$ ${item.unitPrice}</p>
+                    </div>
+                    <p class="font-bold text-xl text-emerald-600">NT$ ${item.totalPrice}</p>
+                    <button class="text-red-500 ml-4 hover:text-red-700" onclick="removeItemFromCart(${item.id})">
+                        X
+                    </button>
+                </div>
+            `).join('');
 
-            currentState.step += 1;
-            updateKioskView();
+            selectionArea.innerHTML = `
+                <h2 class="text-3xl md:text-4xl font-bold text-stone-900 mb-6">🛒 購物車檢視與結帳</h2>
+                <div class="bg-white p-4 md:p-6 rounded-xl shadow-lg mb-6">
+                    ${cartItemsHTML}
+                </div>
+                
+                <div class="flex justify-between items-center bg-emerald-50 p-4 md:p-6 rounded-xl shadow-xl">
+                    <p class="text-2xl font-bold text-stone-900">訂單總金額：</p>
+                    <p class="text-3xl font-extrabold text-emerald-700">NT$ ${totalCartPrice}</p>
+                </div>
+
+                <div class="mt-8 flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
+                    <button onclick="resetKiosk()" class="w-full md:w-1/2 py-3 rounded-lg bg-stone-600 hover:bg-stone-700 text-white font-bold text-lg transition duration-300">
+                        繼續點餐 (回步驟 1)
+                    </button>
+                    <button onclick="finishCheckout()" class="w-full md:w-1/2 py-3 rounded-lg bg-sky-500 hover:bg-sky-600 text-white font-bold text-lg transition duration-300">
+                        確認支付 NT$ ${totalCartPrice}
+                    </button>
+                </div>
+            `;
+            nextStepBtnDesktop.disabled = true;
+            nextStepBtnMobile.disabled = true;
+        }
+
+        /**
+         * 從購物車移除單一品項
+         */
+        function removeItemFromCart(id) {
+            shoppingCart = shoppingCart.filter(item => item.id !== id);
+            updateSummary();
+            renderCart(); // 重新渲染購物車
+        }
+        
+        /**
+         * 完成結帳
+         */
+        function finishCheckout() {
+            const finalTotal = shoppingCart.reduce((sum, item) => sum + item.totalPrice, 0);
+            selectionArea.innerHTML = `
+                <div class="text-center p-8 md:p-12 bg-emerald-50 rounded-xl shadow-lg">
+                    <h2 class="text-4xl font-bold text-emerald-700 mb-4">🎉 交易成功！</h2>
+                    <p class="text-xl text-stone-700 mb-6">感謝您的訂購！總金額：<span class="text-3xl font-extrabold text-emerald-600">NT$ ${finalTotal}</span></p>
+                    <p class="text-stone-600">您的訂單已送往製備區。請稍候，您的養生特調即將完成！</p>
+                    <div class="mt-8">
+                        <button onclick="resetKiosk()" class="bg-stone-700 text-white px-6 py-3 rounded-full hover:bg-stone-900 transition">開始新訂單</button>
+                    </div>
+                </div>
+            `;
+            shoppingCart = []; // 清空購物車
+            updateSummary();
+            nextStepBtnDesktop.disabled = true;
+            nextStepBtnMobile.disabled = true;
         }
 
         /**
@@ -464,8 +602,11 @@
                     renderOptions('topping');
                     break;
                 case 3:
+                    renderOptions('ice');
+                    break;
+                case 4:
                     renderOptions('sweetener');
-                    // 甜度必須選
+                    // 若未選甜度，預設無糖
                     if (!currentState.selectedSweetener) {
                         currentState.selectedSweetener = Materials.sweetener.find(i => i.id === 'none');
                         updateSummary();
@@ -475,13 +616,110 @@
         }
 
         /**
-         * 重設 Kiosk 狀態
+         * 渲染選項卡片
+         * @param {string} category - base, topping, ice, or sweetener
+         */
+        function renderOptions(category) {
+            selectionArea.innerHTML = '';
+            const data = (category === 'ice' ? IceOptions : Materials[category]);
+            
+            const titleMap = {
+                base: '1. 選擇飲品基底',
+                topping: '2. 挑選養生配料 (可選可不選)',
+                ice: '3. 決定冰量/溫度',
+                sweetener: '4. 決定飲品甜度'
+            };
+            const subtitleMap = {
+                base: '（茶、果汁、氣泡水或夜間限定酒品）',
+                topping: '（人蔘、紅棗等高價值配料，點選查看功效）',
+                ice: '（熱飲、常溫或冰塊量選項）',
+                sweetener: '（「無糖」是標配，加糖需付費客製化）'
+            };
+            
+            const cardGridClass = 'grid grid-cols-2 lg:grid-cols-4 gap-4 pb-4'; 
+
+            const headerHTML = `
+                <h2 class="text-2xl md:text-3xl font-bold text-stone-900">${titleMap[category]}</h2>
+                <p class="text-stone-600 mb-4 md:mb-6">${subtitleMap[category]}</p>
+                <div class="${cardGridClass}">
+            `;
+            
+            let cardsHTML = '';
+            data.forEach(item => {
+                const selectedClass = (category === 'base' && currentState.selectedBase && currentState.selectedBase.id === item.id) ||
+                                      (category === 'topping' && currentState.selectedTopping && currentState.selectedTopping.id === item.id) ||
+                                      (category === 'ice' && currentState.selectedIce && currentState.selectedIce.id === item.id) ||
+                                      (category === 'sweetener' && currentState.selectedSweetener && currentState.selectedSweetener.id === item.id)
+                                      ? 'selected' : '';
+
+                const priceText = item.price > 0 ? `+NT$ ${item.price}` : (category === 'sweetener' ? 'NT$ 0' : '');
+                const extraTag = item.type === '夜酒' ? '<span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">夜間限定</span>' : (item.is_healthy ? '<span class="text-xs bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full">養生嚴選</span>' : '');
+
+                cardsHTML += `
+                    <div class="choice-card p-3 border border-stone-300 rounded-xl bg-white shadow-sm flex flex-col h-full ${selectedClass}" data-id="${item.id}" data-category="${category}">
+                        <!-- 圖片部分：建議使用 800x600 的實拍圖 -->
+                        <img src="${item.imageUrl || 'https://placehold.co/800x600?text=圖片'}" alt="${item.name} 示意圖" class="material-image rounded-md mb-2" 
+                             onerror="this.onerror=null;this.src='https://placehold.co/400x100/e0f2f1/064e3b?text=圖片載入失敗'" />
+                        
+                        <!-- 文字資訊部分 -->
+                        <div class="flex flex-col flex-grow">
+                            <div class="flex items-center justify-between mb-1">
+                                <h3 class="text-base md:text-lg font-semibold text-stone-900">${item.name}</h3>
+                                ${extraTag}
+                            </div>
+                            <p class="text-base md:text-lg font-bold text-emerald-600">${priceText}</p>
+                            <p class="text-xs md:text-sm text-stone-500 mt-1 flex-grow">${item.intro.split('，')[0]}...</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            selectionArea.innerHTML = headerHTML + cardsHTML + '</div>';
+            
+            // 加入「數量選擇」區塊 (僅在甜度步驟)
+            if (category === 'sweetener') {
+                selectionArea.innerHTML += `
+                    <div class="mt-8 pt-4 border-t border-stone-300">
+                        <h2 class="text-2xl font-bold text-stone-900 mb-4">5. 選擇數量</h2>
+                        <div class="quantity-control">
+                            <button class="quantity-btn bg-red-400 hover:bg-red-500" onclick="updateQuantity(-1)" ${currentState.quantity === 1 ? 'disabled' : ''}>-</button>
+                            <input id="drink-quantity-input" type="number" min="1" max="99" value="${currentState.quantity}" class="quantity-input mx-4" onchange="updateQuantityInput(this.value)">
+                            <button class="quantity-btn bg-sky-400 hover:bg-sky-500" onclick="updateQuantity(1)">+</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 添加事件監聽器
+            selectionArea.querySelectorAll('.choice-card').forEach(card => {
+                card.addEventListener('click', () => handleSelection(card, category));
+                card.addEventListener('mouseover', () => displayIntro(card, category));
+                card.addEventListener('mouseout', () => clearIntro());
+            });
+
+            // 首次渲染時，如果已經有選擇，則顯示其介紹
+            if (category === 'base' && currentState.selectedBase) {
+                introTextEl.textContent = currentState.selectedBase.intro;
+            } else if (category === 'topping' && currentState.selectedTopping) {
+                 introTextEl.textContent = currentState.selectedTopping.intro;
+            } else if (category === 'ice' && currentState.selectedIce) {
+                 introTextEl.textContent = currentState.selectedIce.intro;
+            } else if (category === 'sweetener' && currentState.selectedSweetener) {
+                 introTextEl.textContent = currentState.selectedSweetener.intro;
+            }
+        }
+
+        /**
+         * 啟動新訂單 (重設所有狀態並回到 Step 1)
          */
         function resetKiosk() {
-            currentState = {
+             shoppingCart = [];
+             currentState = {
                 step: 1,
+                quantity: 1,
                 selectedBase: null,
                 selectedTopping: null,
+                selectedIce: null,
                 selectedSweetener: null,
                 totalPrice: 0
             };
@@ -491,7 +729,6 @@
 
         // --- 初始化與事件監聽 ---
         
-        // 確保兩個按鈕都觸發同一個 NextStep 函數
         nextStepBtnDesktop.addEventListener('click', nextStep);
         nextStepBtnMobile.addEventListener('click', nextStep);
         
