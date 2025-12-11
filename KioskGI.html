@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>仙 (Xian) Kiosk 自動點餐 DEMO - 修復版</title>
+    <title>仙 (Xian) Kiosk 自動點餐 DEMO - 介面修復與佈局強化</title>
     <style>
         /* --- 品牌顏色與模式變數 --- */
         :root {
@@ -22,23 +22,21 @@
             --active-border-night: #245858;
         }
 
-        /* 夜間模式樣式覆蓋 */
+        /* --- 夜間模式樣式覆蓋 (精簡並修正) --- */
         .night-mode {
             --main-theme: var(--night-color);
             --light-bg: #3a3a3a;
             --dark-bg: #2b2b2b;
             --main-text: #f0f0f0;
             --disabled-color: #555;
+            color: var(--main-text);
         }
-
-        /* 夜間模式顏色調整 */
-        .night-mode { color: var(--main-text); }
         .night-mode .kiosk-container { background-color: var(--dark-bg); }
-        .night-mode .top-bar { background-color: var(--light-bg); }
-        .night-mode .item-card { background-color: var(--dark-bg); border-color: #555; }
-        .night-mode .order-panel { background-color: #333; color: #fff; }
-        .night-mode .sugar-note { background-color: #4d402e; border-color: #887755; color: #f4d03f; }
-        .night-mode .custom-header, .night-mode .option-box { background-color: var(--light-bg); }
+        .night-mode .top-bar { background-color: var(--light-bg); border-bottom-color: #555; }
+        .night-mode .item-card { background-color: #333; border-color: #555; }
+        .night-mode .item-card p { color: #ccc; }
+        .night-mode .order-panel { background-color: #333; color: #fff; border-top-color: #555; }
+        .night-mode .custom-header, .night-mode .option-box { background-color: var(--light-bg); border-bottom-color: #555; }
         .night-mode .product-detail-box { background-color: #3a3a3a; border-left-color: var(--main-theme); }
         .night-mode .product-detail-box p { color: #ccc; }
         .night-mode .custom-footer { background-color: #333; }
@@ -61,28 +59,51 @@
             padding-top: 20px;
             color: var(--main-text);
             background-color: var(--dark-bg);
+            overflow: hidden; 
         }
 
         .kiosk-container {
             width: 500px; 
-            max-height: 888px; /* 限制高度在桌面預覽 */
+            max-height: 888px;
             min-height: 800px;
             background-color: var(--dark-bg);
             box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
             border-radius: 12px;
-            overflow: hidden;
+            overflow: hidden; 
             display: flex;
             flex-direction: column; 
             position: relative;
         }
 
-        /* --- 頂部/菜單/卡片 (確保品項正常顯示) --- */
-        .top-bar { flex-shrink: 0; background-color: var(--light-bg); border-bottom: 1px solid #ddd; }
-        .header { padding: 15px 20px; text-align: center; }
+        /* --- 頂部/菜單/卡片 --- */
+        .top-bar { 
+            flex-shrink: 0; 
+            background-color: var(--light-bg); 
+            border-bottom: 1px solid #ddd; 
+            padding-bottom: 5px; /* 為 mode-switcher 留白 */
+        }
+        .mode-switcher { padding: 10px 20px 0; text-align: center; }
+        .mode-switcher p { margin: 0 0 5px 0; }
+        .mode-switcher button { padding: 8px 15px; border: 1px solid var(--main-theme); background: none; color: var(--main-text); border-radius: 5px; margin: 0 5px; cursor: pointer; transition: all 0.2s; }
+        .mode-switcher button.active-mode { background-color: var(--main-theme); color: white; }
+        .header { padding: 5px 20px 15px; text-align: center; }
         .header h1 { color: var(--main-theme); font-size: 1.6em; margin: 0; }
         .header p { font-size: 0.8em; margin: 5px 0 0 0; color: #888; }
-        .main-content { flex-grow: 1; overflow: hidden; display: flex; flex-direction: column; }
-        .menu-items-container { flex-grow: 1; padding: 15px; overflow-y: auto; }
+        
+        .main-content { 
+            flex-grow: 1; /* 佔用剩餘空間 */
+            overflow: hidden; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        
+        /* 菜單項目列表 - 唯一可滾動區域 */
+        .menu-items-container {
+            flex-grow: 1;
+            padding: 15px;
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch;
+        }
         .menu-items { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
         
         .item-card {
@@ -94,12 +115,43 @@
             overflow: hidden;
             padding-bottom: 10px;
             position: relative;
+            transition: transform 0.1s;
         }
+        .item-card:hover { transform: scale(1.02); }
         .item-card img { width: 100%; height: auto; aspect-ratio: 4/3; object-fit: cover; margin-bottom: 5px; }
         .item-card h3 { font-size: 1.1em; margin: 5px 0; }
         .item-card p { font-size: 0.75em; color: #888; margin: 0 0 5px 0; height: 1.2em; overflow: hidden; }
         .item-card .price { font-size: 1.2em; font-weight: bold; color: var(--accent-color); }
-        
+        .info-btn {
+            background: rgba(255, 255, 255, 0.7);
+            color: var(--main-theme);
+            border: 1px solid var(--main-theme);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            line-height: 28px;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            padding: 0;
+        }
+
+
+        /* --- 訂單面板 (Order Panel) --- */
+        .order-panel { 
+            flex-shrink: 0; 
+            background-color: #f0f0f0; 
+            border-top: 1px solid #ddd;
+            padding: 15px;
+        }
+        .order-summary h2 { margin-top: 0; font-size: 1.2em; color: var(--main-theme); }
+        .order-list { list-style: none; padding: 0; max-height: 120px; overflow-y: auto; margin: 10px 0; }
+        .order-list li { padding: 5px 0; border-bottom: 1px dotted #ccc; font-size: 0.9em; }
+        .order-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+        .total-display { font-size: 1.6em; font-weight: bold; color: var(--accent-color); }
+        .checkout-btn { background-color: var(--main-theme); color: white; padding: 12px 20px; border: none; border-radius: 8px; font-size: 1.1em; cursor: pointer; }
+
+
         /* --- 滿版客製化頁面 (Customization Page) --- */
         .customization-page {
             position: absolute;
@@ -111,6 +163,7 @@
             z-index: 500;
             display: none;
             flex-direction: column;
+            overflow: hidden; 
         }
         
         /* 頂部：產品資訊與返回 */
@@ -123,13 +176,32 @@
             border-bottom: 1px solid #ddd;
             position: relative;
         }
-        .custom-header-img { width: 80px; height: 60px; object-fit: cover; border-radius: 8px; margin-right: 15px; }
-        .back-button { position: absolute; left: 10px; top: 15px; background: none; border: none; font-size: 1.5em; cursor: pointer; padding: 5px 10px; color: var(--main-theme); }
+        /* 返回按鈕 (左上角) */
+        .back-button { 
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            padding: 5px 10px;
+            color: var(--main-theme);
+            z-index: 510; 
+        }
+        .custom-header-img { width: 80px; height: 60px; object-fit: cover; border-radius: 8px; margin-right: 15px; margin-left: 40px; /* 為返回按鈕騰出空間 */ }
         .custom-info h3 { margin: 0; font-size: 1.4em; color: var(--main-theme); }
         .custom-info p { margin: 5px 0 0 0; font-size: 1.1em; font-weight: bold; color: var(--accent-color); }
 
-        /* 客製化選項內容區 */
-        .custom-options-container { flex-grow: 1; overflow-y: auto; padding: 20px; }
+
+        /* 客製化選項內容區 - 唯一可滾動區域 */
+        .custom-options-container {
+            flex-grow: 1;
+            overflow-y: auto; 
+            padding: 20px;
+            -webkit-overflow-scrolling: touch;
+        }
         .option-box { background-color: var(--light-bg); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); }
         .option-box label { display: block; font-weight: bold; margin-bottom: 15px; font-size: 1.2em; color: var(--main-theme); }
         
@@ -145,21 +217,12 @@
             transition: all 0.2s;
             cursor: pointer;
         }
-        
-        /* 日間模式選中 */
+        /* 選中按鈕樣式 */
         .option-group button.active {
             background-color: var(--active-bg-day);
             color: white;
             border-color: var(--active-border-day);
             box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
-        }
-
-        /* 夜間模式選中 */
-        .night-mode .option-group button.active {
-            background-color: var(--active-bg-night);
-            color: white;
-            border-color: var(--active-border-night);
-            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
         }
         
         /* 產品詳細介紹 */
@@ -180,18 +243,25 @@
         .quantity-display { font-size: 2em; font-weight: bold; margin: 0 20px; width: 50px; text-align: center; }
 
         /* 底部：加入訂單 */
-        .custom-footer { flex-shrink: 0; background-color: #fff; padding: 15px 20px; border-top: 5px solid var(--accent-color); }
+        .custom-footer { 
+            flex-shrink: 0; 
+            background-color: #fff; 
+            padding: 15px 20px; 
+            border-top: 5px solid var(--accent-color); 
+        }
         .custom-footer-content { display: flex; justify-content: space-between; align-items: center; }
         .custom-total-display { font-size: 1.5em; font-weight: bold; color: var(--accent-color); }
         .add-to-order-btn { background-color: var(--accent-color); color: white; padding: 15px 25px; border: none; border-radius: 8px; font-size: 1.2em; cursor: pointer; }
+
 
         /* --- RWD：手機/掃碼模式 (寬度小於 600px) --- */
         @media (max-width: 600px) {
             body { padding-top: 0; }
             .kiosk-container { width: 100%; height: 100vh; max-height: 100vh; border-radius: 0; box-shadow: none; }
             .menu-items { grid-template-columns: 1fr; gap: 10px; }
-            .custom-header { padding: 10px 50px 10px 10px; }
-            .back-button { left: 10px; top: 10px; }
+            .custom-header { padding-left: 50px; } 
+            .custom-header-img { margin-left: 0; }
+            .back-button { left: 5px; top: 15px; transform: none; }
         }
     </style>
 </head>
@@ -221,7 +291,7 @@
         <div class="order-panel">
             <div class="order-summary">
                 <h2>📋 訂單預覽</h2>
-                <ul id="order-list">
+                <ul id="order-list" class="order-list">
                     <li>尚未點選品項</li>
                 </ul>
             </div>
@@ -236,7 +306,7 @@
         <div id="customizationPage" class="customization-page">
             
             <div class="custom-header">
-                <button class="back-button" onclick="closeCustomizationPage()">&leftarrow;</button>
+                <button class="back-button" onclick="closeCustomizationPage()" aria-label="返回菜單">&leftarrow;</button>
                 <img id="customImage" class="custom-header-img" src="" alt="飲品圖片" onerror="this.onerror=null;this.src='https://via.placeholder.com/400x300?text=Image'">
                 <div class="custom-info">
                     <h3 id="customDrinkName">客製化：品名</h3>
@@ -254,10 +324,8 @@
                 
                 <div class="option-box" id="step1Option">
                     <label id="step1Label">步驟一：甜度調整</label>
-                    <div class="option-group" data-group="step1" id="step1Group">
-                        </div>
-                    <div class="sugar-note" id="step1Note" style="margin-top: 15px;">
-                        </div>
+                    <div class="option-group" data-group="step1" id="step1Group"></div>
+                    <div class="sugar-note" id="step1Note" style="margin-top: 15px;"></div>
                 </div>
 
                 <div class="option-box">
@@ -313,7 +381,7 @@
     </div>
 
     <script>
-        // --- JavaScript 資料庫 (沿用不變) ---
+        // --- JavaScript 資料庫 (保持不變) ---
         const menuData = {
             'day': [
                 { id: 1, name: '桂圓紅棗茶', basePrice: 75, material: '紅棗', description: '溫潤滋補的基礎茶飲。', image: 'day_red_date_tea.webp' },
@@ -391,7 +459,7 @@
                 const card = document.createElement('div');
                 card.className = 'item-card';
                 card.innerHTML = `
-                    <button class="info-btn" data-material="${item.material}" style="position: absolute; top: 5px; right: 5px; z-index: 10;"></button>
+                    <button class="info-btn" data-material="${item.material}" style="position: absolute; top: 5px; right: 5px; z-index: 10;">i</button>
                     <img src="./images/${item.image}" alt="${item.name}" onerror="this.onerror=null;this.src='https://via.placeholder.com/400x300?text=Placeholder'">
                     <div class="item-card-text">
                         <h3>${item.name}</h3>
@@ -430,7 +498,7 @@
         }
 
 
-        // --- 客製化頁面控制 (修復重點在此) ---
+        // --- 客製化頁面控制 ---
 
         function openCustomizationPage(item) {
             currentSelectedItem = item;
@@ -473,32 +541,27 @@
                 noteText = '🍸 <b>立吞調飲</b>：快速調整酒精濃度，符合夜間社交需求。';
             }
             
-            // 渲染步驟一按鈕並設定預設值
             options.forEach((opt, index) => {
                 const btn = document.createElement('button');
                 btn.setAttribute('data-value', opt.value);
                 btn.setAttribute('data-price', opt.price);
                 btn.textContent = opt.text;
                 if (index === 0) btn.classList.add('active'); 
-                btn.onclick = handleOptionClick; // <--- 確保事件綁定
+                btn.onclick = handleOptionClick; 
                 step1Group.appendChild(btn);
             });
             step1Note.innerHTML = noteText;
 
 
             // 4. 重設靜態選項狀態 (溫度/配料)
-            // *** 修復：確保靜態按鈕被正確重設並設定預設 active 狀態 ***
-            document.querySelectorAll('.option-group button').forEach(btn => {
-                // 清除所有 active 狀態
+            document.querySelectorAll('#customizationPage .option-group button').forEach(btn => {
                 btn.classList.remove('active');
                 
-                // 重新設置預設 active 狀態
                 if(btn.getAttribute('data-group') === 'temp' && btn.getAttribute('data-value') === '正常冰') {
                     btn.classList.add('active');
                 } else if (btn.getAttribute('data-group') === 'topping' && btn.getAttribute('data-value') === '無') {
                     btn.classList.add('active');
                 }
-                // 由於這些靜態按鈕的點擊事件已在 DOMContentLoaded 中綁定，這裡無需重複綁定
             });
             
             // 5. 顯示客製化頁面
@@ -529,7 +592,6 @@
             document.querySelectorAll('#customizationPage .option-group').forEach(group => {
                 const activeBtn = group.querySelector('.active');
                 if (activeBtn) {
-                    // 檢查 price 屬性是否存在，如果沒有則視為 0
                     const priceAttr = activeBtn.getAttribute('data-price');
                     const price = parseFloat(priceAttr || 0);
                     pricePerItem += price;
@@ -641,15 +703,14 @@
         }
 
 
-        // --- 初始化 (確保靜態按鈕事件正確綁定) ---
+        // --- 初始化 ---
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('dayModeBtn').addEventListener('click', () => setMode('day'));
             document.getElementById('nightModeBtn').addEventListener('click', () => setMode('night'));
             
-            // *** 修復：僅綁定靜態選項按鈕的點擊事件 ***
+            // 綁定靜態選項按鈕的點擊事件
             document.querySelectorAll('#customizationPage .option-group button').forEach(button => {
                  const groupName = button.parentElement.getAttribute('data-group');
-                 // 排除動態生成的 step1 選項，僅綁定靜態的 temp 和 topping
                  if (groupName !== 'step1') {
                     button.addEventListener('click', handleOptionClick);
                  }
