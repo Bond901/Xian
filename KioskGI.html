@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仙 (Xian) Kiosk 自動點餐 DEMO - 修復版</title>
+    <style>
+        /* --- 品牌顏色與模式變數 --- */
+        :root {
+            --day-color: #5a8d71; 
+            --night-color: #1a4d4d; 
+            --accent-color: #d9534f; 
+            --main-theme: var(--day-color);
+            --light-bg: #f9f9f9;
+            --dark-bg: #fff;
+            --main-text: #333;
+            --disabled-color: #ccc;
+            /* 視覺優化：選中按鈕強調色 */
+            --active-bg-day: #5a8d71;
+            --active-border-day: #3a684b; 
+            --active-bg-night: #3e8080;
+            --active-border-night: #245858;
+        }
+
+        /* 夜間模式樣式覆蓋 */
+        .night-mode {
+            --main-theme: var(--night-color);
+            --light-bg: #3a3a3a;
+            --dark-bg: #2b2b2b;
+            --main-text: #f0f0f0;
+            --disabled-color: #555;
+        }
+
+        /* 夜間模式顏色調整 */
+        .night-mode { color: var(--main-text); }
+        .night-mode .kiosk-container { background-color: var(--dark-bg); }
+        .night-mode .top-bar { background-color: var(--light-bg); }
+        .night-mode .item-card { background-color: var(--dark-bg); border-color: #555; }
+        .night-mode .order-panel { background-color: #333; color: #fff; }
+        .night-mode .sugar-note { background-color: #4d402e; border-color: #887755; color: #f4d03f; }
+        .night-mode .custom-header, .night-mode .option-box { background-color: var(--light-bg); }
+        .night-mode .product-detail-box { background-color: #3a3a3a; border-left-color: var(--main-theme); }
+        .night-mode .product-detail-box p { color: #ccc; }
+        .night-mode .custom-footer { background-color: #333; }
+        .night-mode .option-group button { background-color: #444; border-color: #555; color: #eee; }
+        .night-mode .option-group button.active {
+            background-color: var(--active-bg-night);
+            color: white;
+            border-color: var(--active-border-night);
+        }
+
+        /* --- 基礎排版與 Kiosk 模擬 (500px寬度) --- */
+        body {
+            font-family: 'Arial', 'Microsoft JhengHei', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding-top: 20px;
+            color: var(--main-text);
+            background-color: var(--dark-bg);
+        }
+
+        .kiosk-container {
+            width: 500px; 
+            max-height: 888px; /* 限制高度在桌面預覽 */
+            min-height: 800px;
+            background-color: var(--dark-bg);
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column; 
+            position: relative;
+        }
+
+        /* --- 頂部/菜單/卡片 (確保品項正常顯示) --- */
+        .top-bar { flex-shrink: 0; background-color: var(--light-bg); border-bottom: 1px solid #ddd; }
+        .header { padding: 15px 20px; text-align: center; }
+        .header h1 { color: var(--main-theme); font-size: 1.6em; margin: 0; }
+        .header p { font-size: 0.8em; margin: 5px 0 0 0; color: #888; }
+        .main-content { flex-grow: 1; overflow: hidden; display: flex; flex-direction: column; }
+        .menu-items-container { flex-grow: 1; padding: 15px; overflow-y: auto; }
+        .menu-items { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        
+        .item-card {
+            background-color: var(--dark-bg);
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            overflow: hidden;
+            padding-bottom: 10px;
+            position: relative;
+        }
+        .item-card img { width: 100%; height: auto; aspect-ratio: 4/3; object-fit: cover; margin-bottom: 5px; }
+        .item-card h3 { font-size: 1.1em; margin: 5px 0; }
+        .item-card p { font-size: 0.75em; color: #888; margin: 0 0 5px 0; height: 1.2em; overflow: hidden; }
+        .item-card .price { font-size: 1.2em; font-weight: bold; color: var(--accent-color); }
+        
+        /* --- 滿版客製化頁面 (Customization Page) --- */
+        .customization-page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--dark-bg);
+            z-index: 500;
+            display: none;
+            flex-direction: column;
+        }
+        
+        /* 頂部：產品資訊與返回 */
+        .custom-header {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            background-color: var(--light-bg);
+            border-bottom: 1px solid #ddd;
+            position: relative;
+        }
+        .custom-header-img { width: 80px; height: 60px; object-fit: cover; border-radius: 8px; margin-right: 15px; }
+        .back-button { position: absolute; left: 10px; top: 15px; background: none; border: none; font-size: 1.5em; cursor: pointer; padding: 5px 10px; color: var(--main-theme); }
+        .custom-info h3 { margin: 0; font-size: 1.4em; color: var(--main-theme); }
+        .custom-info p { margin: 5px 0 0 0; font-size: 1.1em; font-weight: bold; color: var(--accent-color); }
+
+        /* 客製化選項內容區 */
+        .custom-options-container { flex-grow: 1; overflow-y: auto; padding: 20px; }
+        .option-box { background-color: var(--light-bg); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); }
+        .option-box label { display: block; font-weight: bold; margin-bottom: 15px; font-size: 1.2em; color: var(--main-theme); }
+        
+        /* 選項按鈕組 */
+        .option-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .option-group button {
+            background-color: var(--light-bg);
+            border: 2px solid #ddd;
+            padding: 15px 10px;
+            border-radius: 8px;
+            font-size: 1em;
+            color: var(--main-text);
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        /* 日間模式選中 */
+        .option-group button.active {
+            background-color: var(--active-bg-day);
+            color: white;
+            border-color: var(--active-border-day);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 夜間模式選中 */
+        .night-mode .option-group button.active {
+            background-color: var(--active-bg-night);
+            color: white;
+            border-color: var(--active-border-night);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* 產品詳細介紹 */
+        .product-detail-box {
+            background-color: var(--light-bg);
+            border-left: 5px solid var(--main-theme);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .product-detail-box h4 { color: var(--main-theme); margin: 0 0 5px 0; font-size: 1.1em; }
+        .product-detail-box p { font-size: 0.9em; color: #666; margin: 0 0 5px 0; line-height: 1.4; }
+        
+        /* 數量控制 */
+        .quantity-control { display: flex; align-items: center; justify-content: center; margin-top: 20px; }
+        .qty-btn { background-color: var(--main-theme); color: white; border: none; width: 50px; height: 50px; font-size: 2em; border-radius: 50%; cursor: pointer; }
+        .qty-btn:disabled { background-color: var(--disabled-color); cursor: not-allowed; }
+        .quantity-display { font-size: 2em; font-weight: bold; margin: 0 20px; width: 50px; text-align: center; }
+
+        /* 底部：加入訂單 */
+        .custom-footer { flex-shrink: 0; background-color: #fff; padding: 15px 20px; border-top: 5px solid var(--accent-color); }
+        .custom-footer-content { display: flex; justify-content: space-between; align-items: center; }
+        .custom-total-display { font-size: 1.5em; font-weight: bold; color: var(--accent-color); }
+        .add-to-order-btn { background-color: var(--accent-color); color: white; padding: 15px 25px; border: none; border-radius: 8px; font-size: 1.2em; cursor: pointer; }
+
+        /* --- RWD：手機/掃碼模式 (寬度小於 600px) --- */
+        @media (max-width: 600px) {
+            body { padding-top: 0; }
+            .kiosk-container { width: 100%; height: 100vh; max-height: 100vh; border-radius: 0; box-shadow: none; }
+            .menu-items { grid-template-columns: 1fr; gap: 10px; }
+            .custom-header { padding: 10px 50px 10px 10px; }
+            .back-button { left: 10px; top: 10px; }
+        }
+    </style>
+</head>
+<body id="kioskBody">
+
+    <div class="kiosk-container">
+
+        <div class="top-bar">
+            <div class="mode-switcher">
+                <p style="margin: 0 0 5px 0; font-size: 0.75em; color: #888;">**場景創新**：日茶夜酒模式，提升坪效</p>
+                <button id="dayModeBtn" class="active-mode">☀️ 日茶模式</button>
+                <button id="nightModeBtn">🍸 夜酒模式</button>
+            </div>
+            <div class="header">
+                <h1 id="kioskTitle">仙 (Xian) Kiosk 自動點餐</h1>
+                <p id="kioskSubtitle">新養生飲品 | 高效率點餐流程 | **無糖標配，健康優先**</p>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="menu-items-container">
+                <div class="menu-items" id="menu-list">
+                    </div>
+            </div>
+        </div>
+
+        <div class="order-panel">
+            <div class="order-summary">
+                <h2>📋 訂單預覽</h2>
+                <ul id="order-list">
+                    <li>尚未點選品項</li>
+                </ul>
+            </div>
+            <div class="order-footer">
+                <div class="total-display" id="total-price">
+                    總計: NT$ 0
+                </div>
+                <button class="checkout-btn">日茶結帳</button>
+            </div>
+        </div>
+        
+        <div id="customizationPage" class="customization-page">
+            
+            <div class="custom-header">
+                <button class="back-button" onclick="closeCustomizationPage()">&leftarrow;</button>
+                <img id="customImage" class="custom-header-img" src="" alt="飲品圖片" onerror="this.onerror=null;this.src='https://via.placeholder.com/400x300?text=Image'">
+                <div class="custom-info">
+                    <h3 id="customDrinkName">客製化：品名</h3>
+                    <p id="customDrinkBasePrice"></p>
+                </div>
+            </div>
+
+            <div class="custom-options-container">
+                
+                <div class="product-detail-box">
+                    <h4 id="detailTitle">產品介紹與基底物料</h4>
+                    <p id="detailDescription"></p>
+                    <p id="detailMaterial"></p>
+                </div>
+                
+                <div class="option-box" id="step1Option">
+                    <label id="step1Label">步驟一：甜度調整</label>
+                    <div class="option-group" data-group="step1" id="step1Group">
+                        </div>
+                    <div class="sugar-note" id="step1Note" style="margin-top: 15px;">
+                        </div>
+                </div>
+
+                <div class="option-box">
+                    <label>步驟二：溫度選擇</label>
+                    <div class="option-group" data-group="temp">
+                        <button data-value="正常冰" data-price="0">正常冰</button>
+                        <button data-value="少冰" data-price="0">少冰</button>
+                        <button data-value="去冰" data-price="0">去冰</button>
+                        <button data-value="溫" data-price="0">溫</button>
+                        <button data-value="熱" data-price="0">熱</button>
+                    </div>
+                </div>
+                
+                <div class="option-box">
+                    <label>步驟三：配料加購 (選配)</label>
+                    <div class="option-group" data-group="topping">
+                        <button data-value="奇亞籽" data-price="10">奇亞籽 (+10)</button>
+                        <button data-value="蘆薈粒" data-price="15">蘆薈粒 (+15)</button>
+                        <button data-value="無" data-price="0">無</button>
+                    </div>
+                </div>
+                
+                <div class="option-box">
+                    <label>步驟四：選擇數量</label>
+                    <div class="quantity-control">
+                        <button class="qty-btn" id="decreaseQty" onclick="updateQuantity(-1)">-</button>
+                        <div class="quantity-display" id="itemQuantity">1</div>
+                        <button class="qty-btn" id="increaseQty" onclick="updateQuantity(1)">+</button>
+                    </div>
+                </div>
+
+            </div>
+            
+            <div class="custom-footer">
+                <div class="custom-footer-content">
+                    <div class="custom-total-display">
+                        小計: NT$<span id="customCurrentPrice">0</span>
+                    </div>
+                    <button class="add-to-order-btn" onclick="addItemToOrder()">加入訂單</button>
+                </div>
+            </div>
+
+        </div>
+
+        <div id="materialModal" class="modal">
+            <div class="custom-content" style="max-width: 400px;">
+                <span class="close-btn" onclick="closeModal('materialModal')">&times;</span>
+                <h2 class="material-title" id="materialName" style="font-size: 1.5em;"></h2>
+                <div class="material-description" id="materialDesc" style="line-height: 1.5;"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- JavaScript 資料庫 (沿用不變) ---
+        const menuData = {
+            'day': [
+                { id: 1, name: '桂圓紅棗茶', basePrice: 75, material: '紅棗', description: '溫潤滋補的基礎茶飲。', image: 'day_red_date_tea.webp' },
+                { id: 2, name: '冷萃烏龍青', basePrice: 60, material: '烏龍茶葉', description: '低咖啡因冷泡工藝。', image: 'day_cold_brew_oolong.webp' },
+                { id: 3, name: '黑糖薑母暖飲', basePrice: 85, material: '老薑', description: '針對寒性體質設計。', image: 'day_ginger_warming_drink.webp' },
+                { id: 4, name: '洛神花果茶', basePrice: 70, material: '洛神花', description: '天然酸甜，富含花青素。', image: 'day_roselle_fruit_tea.webp' },
+                { id: 5, name: '經典四季青茶', basePrice: 50, material: '四季青茶葉', description: '清爽解膩，最受歡迎的基底茶。', image: 'day_four_seasons_tea.webp' },
+                { id: 6, name: '蜂蜜檸檬養樂多', basePrice: 80, material: '蜂蜜', description: '天然蜂蜜搭配養樂多，促進腸道健康。', image: 'day_honey_lemon_yakult.webp' },
+            ],
+            'night': [
+                { id: 101, name: '東方美人 Gin Tonic', basePrice: 150, material: '東方美人茶', description: '以台灣茶為基底調和的清新低酒精飲品。', image: 'night_beauty_gin_tonic.webp' },
+                { id: 102, name: '黑糖波霸 Irish Cream', basePrice: 180, material: '愛爾蘭奶酒', description: '經典奶酒搭配Q彈波霸，甜而不膩。', image: 'night_boba_irish_cream.webp' },
+                { id: 103, name: '熱紅酒香料茶 (Non-Alcoholic 可選)', basePrice: 130, material: '肉桂', description: '溫暖香料與養生茶結合，放鬆身心。', image: 'night_mulled_spice_tea.webp' },
+                { id: 104, name: '荔枝蜜露氣泡酒', basePrice: 160, material: '荔枝', description: '果香濃郁，清爽氣泡感，適合立吞小酌。', image: 'night_lychee_sparkling_wine.webp' },
+                { id: 105, name: '威士忌普洱茶', basePrice: 190, material: '普洱茶', description: '濃郁茶味與威士忌的沉穩組合。', image: 'night_whiskey_puer.webp' },
+                { id: 106, name: '玫瑰花園氣泡水', basePrice: 120, material: '玫瑰花', description: '花香基底，無酒精清爽選擇。', image: 'night_rose_sparkling_water.webp' },
+            ]
+        };
+
+        const materialData = { 
+            '紅棗': { title: '新疆優選紅棗', desc: '我們的紅棗來自新疆地區，富含維生素C和鐵質。**無人工燻硫處理**。' },
+            '烏龍茶葉': { title: '台灣高山手摘烏龍', desc: '冷萃技術萃取，口感回甘，**茶多酚含量高**。' },
+            '老薑': { title: '南投竹薑', desc: '選用南投地區的優質竹薑，薑味濃郁。**非濃縮還原**。' },
+            '洛神花': { title: '台東洛神花', desc: '嚴選台東小農洛神花，天然酸甜。**無人工色素添加**。' },
+            '東方美人茶': { title: '東方美人茶基底', desc: '特選頂級東方美人茶，與琴酒調和後口感平衡。**低度酒精調和**。' },
+            '愛爾蘭奶酒': { title: '頂級愛爾蘭奶酒', desc: '使用高品質愛爾蘭威士忌和鮮奶油製成，確保夜間飲品的品質感。**高品質原料確保夜酒品質**。' },
+            '肉桂': { title: '有機錫蘭肉桂', desc: '採用高品質錫蘭肉桂，香氣溫和。' },
+            '荔枝': { title: '新鮮冷凍荔枝果肉', desc: '選用當季新鮮荔枝快速冷凍，搭配氣泡酒口感清爽。' },
+            '四季青茶葉': { title: '台灣小葉種四季青', desc: '清香型小葉種青茶，採用輕發酵工藝，適合無糖飲用。' },
+            '蜂蜜': { title: '屏東龍眼花蜜', desc: '天然屏東龍眼花蜜，甜味天然不死甜，是我們推薦的付費甜度配料。' },
+            '普洱茶': { title: '雲南陳年普洱', desc: '精選陳年熟普洱，茶湯醇厚，與威士忌搭配能產生獨特的煙燻口感。' },
+            '玫瑰花': { title: '大馬士革玫瑰花瓣', desc: '選用食用級大馬士革玫瑰花瓣，花香濃郁自然，無農藥殘留。' },
+        };
+
+        let currentMode = 'day';
+        let currentSelectedItem = null;
+        let order = [];
+        let currentQuantity = 1;
+        let currentCustomizationBasePrice = 0;
+
+        function setMode(mode) { 
+            currentMode = mode;
+            const body = document.getElementById('kioskBody');
+            const dayBtn = document.getElementById('dayModeBtn');
+            const nightBtn = document.getElementById('nightModeBtn');
+
+            if (mode === 'night') {
+                body.classList.add('night-mode');
+                nightBtn.classList.add('active-mode');
+                dayBtn.classList.remove('active-mode');
+                document.getElementById('kioskTitle').innerHTML = '仙 (Xian) 🍸 夜酒 Kiosk';
+                document.getElementById('kioskSubtitle').innerHTML = '夜間專屬調飲 | **立吞文化** | **高坪效延長營業時間**';
+                document.querySelector('.checkout-btn').textContent = '夜酒結帳';
+            } else {
+                body.classList.remove('night-mode');
+                dayBtn.classList.add('active-mode');
+                nightBtn.classList.remove('active-mode');
+                document.getElementById('kioskTitle').innerHTML = '仙 (Xian) 🌤️ Kiosk 自動點餐';
+                document.getElementById('kioskSubtitle').innerHTML = '新養生飲品 | 高效率點餐流程 | **無糖標配，健康優先**';
+                document.querySelector('.checkout-btn').textContent = '日茶結帳';
+            }
+            
+            renderMenu(menuData[mode]);
+        }
+
+        function renderMenu(data) { 
+            const menuList = document.getElementById('menu-list');
+            menuList.innerHTML = '';
+            
+            if (order.length === 0) {
+                 document.getElementById('order-list').innerHTML = '<li>尚未點選品項</li>';
+            }
+
+            data.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'item-card';
+                card.innerHTML = `
+                    <button class="info-btn" data-material="${item.material}" style="position: absolute; top: 5px; right: 5px; z-index: 10;"></button>
+                    <img src="./images/${item.image}" alt="${item.name}" onerror="this.onerror=null;this.src='https://via.placeholder.com/400x300?text=Placeholder'">
+                    <div class="item-card-text">
+                        <h3>${item.name}</h3>
+                        <p>${item.description}</p>
+                        <p class="price">NT$ ${item.basePrice}</p>
+                    </div>
+                `;
+                card.onclick = (e) => {
+                    if (!e.target.classList.contains('info-btn')) {
+                        openCustomizationPage(item); 
+                    }
+                };
+
+                menuList.appendChild(card);
+            });
+
+            document.querySelectorAll('.info-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const materialName = btn.getAttribute('data-material');
+                    showMaterialInfo(materialName);
+                };
+            });
+        }
+
+        function showMaterialInfo(materialName) { 
+            const data = materialData[materialName];
+            if (!data) return;
+            document.getElementById('materialName').textContent = `${materialName} (${data.title})`;
+            document.getElementById('materialDesc').innerHTML = `<p>${data.desc}</p>`;
+            document.getElementById('materialModal').style.display = 'block';
+        }
+
+        function closeModal(modalId) { 
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+
+        // --- 客製化頁面控制 (修復重點在此) ---
+
+        function openCustomizationPage(item) {
+            currentSelectedItem = item;
+            currentQuantity = 1;
+
+            // 1. 設置頂部產品資訊
+            document.getElementById('customDrinkName').textContent = item.name;
+            document.getElementById('customDrinkBasePrice').textContent = `基礎價: NT$${item.basePrice}`;
+            document.getElementById('customImage').src = `./images/${item.image}`;
+            
+            // 2. 載入產品詳細介紹
+            const materialInfo = materialData[item.material];
+            document.getElementById('detailDescription').textContent = item.description;
+            document.getElementById('detailMaterial').innerHTML = `**基底物料:** ${item.material} (${materialInfo.title})`;
+
+            // 3. 處理步驟一 (甜度/酒精) - 動態生成並綁定
+            const step1Label = document.getElementById('step1Label');
+            const step1Group = document.getElementById('step1Group');
+            const step1Note = document.getElementById('step1Note');
+            step1Group.innerHTML = ''; 
+
+            let options, noteText;
+            if (currentMode === 'day') {
+                step1Label.textContent = '步驟一：甜度調整 (無糖標配，健康心智)';
+                step1Group.setAttribute('data-group', 'sugar');
+                options = [
+                    { value: "無糖", price: 0, text: "無糖 (NT$0)" },
+                    { value: "微糖(蜂蜜)", price: 10, text: "微糖 (蜂蜜 +10)" },
+                    { value: "半糖(蔗糖)", price: 15, text: "半糖 (蔗糖 +15)" }
+                ];
+                noteText = '✅ <b>無糖標配</b>：甜度為付費客製化配料，鼓勵天然口味。';
+            } else {
+                step1Label.textContent = '步驟一：酒精強度 (夜酒模式，高客單價)';
+                step1Group.setAttribute('data-group', 'alcohol');
+                options = [
+                    { value: "無酒精", price: 0, text: "無酒精調和 (NT$0)" },
+                    { value: "微醺(3%)", price: 30, text: "微醺 (3% +30)" },
+                    { value: "標準(6%)", price: 50, text: "標準 (6% +50)" }
+                ];
+                noteText = '🍸 <b>立吞調飲</b>：快速調整酒精濃度，符合夜間社交需求。';
+            }
+            
+            // 渲染步驟一按鈕並設定預設值
+            options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.setAttribute('data-value', opt.value);
+                btn.setAttribute('data-price', opt.price);
+                btn.textContent = opt.text;
+                if (index === 0) btn.classList.add('active'); 
+                btn.onclick = handleOptionClick; // <--- 確保事件綁定
+                step1Group.appendChild(btn);
+            });
+            step1Note.innerHTML = noteText;
+
+
+            // 4. 重設靜態選項狀態 (溫度/配料)
+            // *** 修復：確保靜態按鈕被正確重設並設定預設 active 狀態 ***
+            document.querySelectorAll('.option-group button').forEach(btn => {
+                // 清除所有 active 狀態
+                btn.classList.remove('active');
+                
+                // 重新設置預設 active 狀態
+                if(btn.getAttribute('data-group') === 'temp' && btn.getAttribute('data-value') === '正常冰') {
+                    btn.classList.add('active');
+                } else if (btn.getAttribute('data-group') === 'topping' && btn.getAttribute('data-value') === '無') {
+                    btn.classList.add('active');
+                }
+                // 由於這些靜態按鈕的點擊事件已在 DOMContentLoaded 中綁定，這裡無需重複綁定
+            });
+            
+            // 5. 顯示客製化頁面
+            document.getElementById('customizationPage').style.display = 'flex';
+            
+            // 6. 初始化數量和價格
+            document.getElementById('itemQuantity').textContent = currentQuantity;
+            document.getElementById('decreaseQty').disabled = true;
+            calculateCustomPrice();
+        }
+        
+        function closeCustomizationPage() {
+            document.getElementById('customizationPage').style.display = 'none';
+        }
+        
+        function handleOptionClick() {
+            const group = this.parentElement;
+            group.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            calculateCustomPrice(); 
+        }
+
+        function calculateCustomPrice() {
+            if (!currentSelectedItem) return;
+
+            let pricePerItem = currentSelectedItem.basePrice;
+
+            document.querySelectorAll('#customizationPage .option-group').forEach(group => {
+                const activeBtn = group.querySelector('.active');
+                if (activeBtn) {
+                    // 檢查 price 屬性是否存在，如果沒有則視為 0
+                    const priceAttr = activeBtn.getAttribute('data-price');
+                    const price = parseFloat(priceAttr || 0);
+                    pricePerItem += price;
+                }
+            });
+
+            currentCustomizationBasePrice = pricePerItem;
+            const finalPrice = pricePerItem * currentQuantity;
+
+            document.getElementById('customCurrentPrice').textContent = finalPrice;
+        }
+
+        function updateQuantity(change) {
+            currentQuantity += change;
+            if (currentQuantity < 1) currentQuantity = 1;
+
+            document.getElementById('itemQuantity').textContent = currentQuantity;
+            
+            document.getElementById('decreaseQty').disabled = (currentQuantity <= 1);
+
+            calculateCustomPrice(); 
+        }
+
+
+        function addItemToOrder() {
+            if (!currentSelectedItem) return;
+
+            const customizations = {};
+            let pricePerItem = currentSelectedItem.basePrice;
+
+            document.querySelectorAll('#customizationPage .option-group').forEach(group => {
+                const activeBtn = group.querySelector('.active');
+                const groupName = group.getAttribute('data-group');
+                const value = activeBtn.getAttribute('data-value');
+                const price = parseFloat(activeBtn.getAttribute('data-price') || 0);
+                
+                if (groupName === 'step1') {
+                    customizations[currentMode === 'day' ? 'sugar' : 'alcohol'] = value;
+                } else {
+                    customizations[groupName] = value;
+                }
+                
+                pricePerItem += price;
+            });
+
+            for (let i = 0; i < currentQuantity; i++) {
+                 const orderItem = {
+                    id: currentSelectedItem.id,
+                    name: currentSelectedItem.name,
+                    price: pricePerItem, 
+                    customizations: customizations,
+                    mode: currentMode
+                };
+                order.push(orderItem);
+            }
+            
+            renderOrder();
+            closeCustomizationPage();
+        }
+
+        function renderOrder() {
+            const orderList = document.getElementById('order-list');
+            const totalDisplay = document.getElementById('total-price');
+            let totalPrice = 0;
+
+            orderList.innerHTML = '';
+            
+            const groupedOrder = {};
+            order.forEach(item => {
+                totalPrice += item.price;
+                const key = JSON.stringify({ name: item.name, cust: item.customizations });
+                if (!groupedOrder[key]) {
+                    groupedOrder[key] = { ...item, count: 0, subtotal: 0 };
+                }
+                groupedOrder[key].count += 1;
+                groupedOrder[key].subtotal += item.price;
+            });
+
+            Object.values(groupedOrder).forEach(item => {
+                let mainCustomText = '';
+                if (item.mode === 'day') {
+                    const sugarText = item.customizations.sugar !== '無糖' ? `<span style="color:var(--accent-color);">${item.customizations.sugar.split('(')[0]}</span>` : item.customizations.sugar;
+                    mainCustomText = `${sugarText}`;
+                } else {
+                    const alcoholText = item.customizations.alcohol;
+                    mainCustomText = `${alcoholText}`;
+                }
+                
+                const toppingText = item.customizations.topping !== '無' ? ` + ${item.customizations.topping}` : '';
+
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>**${item.name}** x ${item.count}</span>
+                        <span>NT$${item.subtotal}</span>
+                    </div>
+                    <small>
+                        ${mainCustomText} / ${item.customizations.temp} ${toppingText}
+                    </small>
+                `;
+                orderList.appendChild(li);
+            });
+
+            if (order.length === 0) {
+                 orderList.innerHTML = '<li>尚未點選品項</li>';
+            }
+
+            totalDisplay.textContent = `總計: NT$ ${totalPrice}`;
+        }
+
+
+        // --- 初始化 (確保靜態按鈕事件正確綁定) ---
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('dayModeBtn').addEventListener('click', () => setMode('day'));
+            document.getElementById('nightModeBtn').addEventListener('click', () => setMode('night'));
+            
+            // *** 修復：僅綁定靜態選項按鈕的點擊事件 ***
+            document.querySelectorAll('#customizationPage .option-group button').forEach(button => {
+                 const groupName = button.parentElement.getAttribute('data-group');
+                 // 排除動態生成的 step1 選項，僅綁定靜態的 temp 和 topping
+                 if (groupName !== 'step1') {
+                    button.addEventListener('click', handleOptionClick);
+                 }
+            });
+            
+            setMode('day'); 
+
+            document.querySelector('.checkout-btn').addEventListener('click', () => {
+                if (order.length === 0) {
+                    alert('請先點選飲品');
+                    return;
+                }
+                const currentButtonText = document.querySelector('.checkout-btn').textContent;
+                let checkoutMessage;
+                
+                if (currentMode === 'day') {
+                    checkoutMessage = '日茶模式結帳成功！訂單已透過 Kiosk 系統匯入「引導式流水線」。';
+                } else {
+                    checkoutMessage = '夜酒模式結帳成功！訂單已進入「立吞調飲區」。';
+                }
+                    
+                alert(`[${currentButtonText}] 執行完成！\n\n${checkoutMessage}\n\n本次訂單總計 ${order.length} 項飲品，總金額 ${document.getElementById('total-price').textContent}`);
+                
+                order = [];
+                renderOrder();
+            });
+        });
+    </script>
+
+</body>
+</html>
